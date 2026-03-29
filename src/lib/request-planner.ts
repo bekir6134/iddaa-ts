@@ -20,8 +20,8 @@ export interface RefreshResult {
 export async function runDailyRefresh(): Promise<RefreshResult> {
   let requestsUsed = 0;
   const errors: string[] = [];
-  const today = api.getTodayStr();
-  const tomorrow = api.getTomorrowStr();
+  const next7Days = api.getNextDaysStr(7); // bugün dahil 7 gün
+  const today = next7Days[0];
 
   const cache = await getCache();
 
@@ -59,37 +59,27 @@ export async function runDailyRefresh(): Promise<RefreshResult> {
   cache.standings = { byLeague: standingsByLeague };
   await saveCache('standings', cache.standings);
 
-  // ── Phase 2: Today's fixtures (8 leagues) ───────────────────────────────────
+  // ── Phase 2: Fixtures for next 7 days — 1 request per league (next param) ───
+  // API /fixtures?league=X&season=Y&next=50 returns upcoming fixtures, no date loop needed
   const todayFixtures: Fixture[] = [];
-  const byLeagueToday: Record<number, Fixture[]> = {};
-
-  for (const leagueId of ALL_LEAGUE_IDS) {
-    const res = await safe(`fixtures-today-${leagueId}`, () => api.getFixtures(leagueId, today));
-    if (res?.response?.length) {
-      byLeagueToday[leagueId] = res.response;
-      todayFixtures.push(...res.response);
-    }
-  }
-
-  // ── Phase 3: Tomorrow's fixtures (8 leagues) ─────────────────────────────────
   const tomorrowFixtures: Fixture[] = [];
-  const byLeagueTomorrow: Record<number, Fixture[]> = {};
-
-  for (const leagueId of ALL_LEAGUE_IDS) {
-    const res = await safe(`fixtures-tomorrow-${leagueId}`, () => api.getFixtures(leagueId, tomorrow));
-    if (res?.response?.length) {
-      byLeagueTomorrow[leagueId] = res.response;
-      tomorrowFixtures.push(...res.response);
-    }
-  }
-
-  // Merge byLeague (today + tomorrow)
   const allByLeague: Record<number, Fixture[]> = {};
+
   for (const leagueId of ALL_LEAGUE_IDS) {
-    allByLeague[leagueId] = [
-      ...(byLeagueToday[leagueId] ?? []),
-      ...(byLeagueTomorrow[leagueId] ?? []),
-    ];
+    if (!canRequest()) break;
+    const res = await safe(`fixtures-next7-${leagueId}`, () =>
+      api.getFixturesNext(leagueId, 20)
+    );
+    if (res?.response?.length) {
+      const fixtures = res.response;
+      allByLeague[leagueId] = fixtures;
+
+      for (const f of fixtures) {
+        const fDate = f.fixture.date?.slice(0, 10);
+        if (fDate === today) todayFixtures.push(f);
+        else if (fDate === next7Days[1]) tomorrowFixtures.push(f);
+      }
+    }
   }
 
   cache.fixtures = { today: todayFixtures, tomorrow: tomorrowFixtures, byLeague: allByLeague };
@@ -114,30 +104,19 @@ export async function runDailyRefresh(): Promise<RefreshResult> {
   cache.injuries = { byLeague: injuriesByLeague, byTeam: injuriesByTeam };
   await saveCache('injuries', cache.injuries);
 
-  // ── Phase 5: Odds (leagues with today's matches, up to 3 fixtures/league) ───
-  const allFixtures = [...todayFixtures, ...tomorrowFixtures];
+  // ── Phase 5: Odds — fixture bazlı, önümüzdeki 7 günün top maçları ───────────
+  const allFixtures = Object.values(allByLeague).flat();
   const oddsByFixture: AppCache['odds']['byFixture'] = {};
 
-  // Get up to 15 odds requests across leagues
-  const leaguesWithMatches = ALL_LEAGUE_IDS.filter(
-    (id) => (byLeagueToday[id]?.length ?? 0) > 0 || (byLeagueTomorrow[id]?.length ?? 0) > 0
-  );
+  // Her lig için next param ile odds çek (tek istek/lig)
+  const leaguesWithMatches = ALL_LEAGUE_IDS.filter((id) => (allByLeague[id]?.length ?? 0) > 0);
 
   for (const leagueId of leaguesWithMatches) {
     if (!canRequest()) break;
-    const res = await safe(`odds-${leagueId}`, () => api.getOdds(leagueId, today));
+    const res = await safe(`odds-${leagueId}`, () => api.getOdds(leagueId));
     if (res?.response?.length) {
       for (const odd of res.response) {
         oddsByFixture[odd.fixture.id] = odd;
-      }
-    }
-    // also tomorrow
-    if (canRequest()) {
-      const res2 = await safe(`odds-tomorrow-${leagueId}`, () => api.getOdds(leagueId, tomorrow));
-      if (res2?.response?.length) {
-        for (const odd of res2.response) {
-          oddsByFixture[odd.fixture.id] = odd;
-        }
       }
     }
   }
@@ -148,7 +127,7 @@ export async function runDailyRefresh(): Promise<RefreshResult> {
   // ── Phase 6: Predictions (top 10 fixtures by league priority) ───────────────
   const priorityLeagues = [LEAGUE_IDS.SUPER_LIG, LEAGUE_IDS.CHAMPIONS_LEAGUE, LEAGUE_IDS.PREMIER_LEAGUE, LEAGUE_IDS.LA_LIGA, LEAGUE_IDS.SERIE_A, LEAGUE_IDS.BUNDESLIGA, LEAGUE_IDS.LIGUE_1, LEAGUE_IDS.EUROPA_LEAGUE];
   const predictionFixtures = priorityLeagues
-    .flatMap((id) => byLeagueToday[id] ?? [])
+    .flatMap((id) => allByLeague[id] ?? [])
     .slice(0, 10);
 
   const predictionsByFixture: AppCache['predictions']['byFixture'] = {};
@@ -186,7 +165,7 @@ export async function runDailyRefresh(): Promise<RefreshResult> {
   const teamLeagueMap = new Map<number, number>();
 
   for (const leagueId of priorityLeagues) {
-    for (const fixture of (byLeagueToday[leagueId] ?? []).slice(0, 2)) {
+    for (const fixture of (allByLeague[leagueId] ?? []).slice(0, 2)) {
       teamIds.add(fixture.teams.home.id);
       teamIds.add(fixture.teams.away.id);
       teamLeagueMap.set(fixture.teams.home.id, leagueId);
@@ -212,7 +191,7 @@ export async function runDailyRefresh(): Promise<RefreshResult> {
   await saveCache('teamStats', cache.teamStats);
 
   // ── Update meta ──────────────────────────────────────────────────────────────
-  const fixtureCount = todayFixtures.length + tomorrowFixtures.length;
+  const fixtureCount = allFixtures.length;
   const now = new Date();
   const nextUpdate = new Date(now);
   nextUpdate.setDate(nextUpdate.getDate() + 1);

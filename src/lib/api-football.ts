@@ -43,6 +43,15 @@ export async function getFixtureById(fixtureId: number): Promise<ApiResponse<Fix
   return apiFetch<Fixture>('/fixtures', { id: fixtureId });
 }
 
+// Bir ligi önümüzdeki N maçını çek (tarih döngüsü olmadan tek istek)
+export async function getFixturesNext(leagueId: number, count = 20): Promise<ApiResponse<Fixture>> {
+  return apiFetch<Fixture>('/fixtures', {
+    league: leagueId,
+    season: SEASON,
+    next: count,
+  });
+}
+
 export async function getH2H(team1Id: number, team2Id: number, last = 10): Promise<ApiResponse<Fixture>> {
   return apiFetch<Fixture>('/fixtures/headtohead', {
     h2h: `${team1Id}-${team2Id}`,
@@ -103,7 +112,7 @@ export async function getTeamStatistics(teamId: number, leagueId: number): Promi
   });
 }
 
-// ─── Helper: today + tomorrow dates ──────────────────────────────────────────
+// ─── Helper: date utilities ───────────────────────────────────────────────────
 
 export function getTodayStr(): string {
   return getTurkeyDate();
@@ -113,4 +122,12 @@ export function getTomorrowStr(): string {
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
   return getTurkeyDate(tomorrow);
+}
+
+export function getNextDaysStr(days: number): string[] {
+  return Array.from({ length: days }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() + i);
+    return getTurkeyDate(d);
+  });
 }
