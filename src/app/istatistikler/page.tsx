@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useTodayFixtures, useTomorrowFixtures, useAllPredictions, useAllStandings } from '@/hooks/useData';
+import { useWeekFixtures, useAllPredictions, useAllStandings } from '@/hooks/useData';
 import { Skeleton } from '@/components/ui/skeleton';
 import { LEAGUE_IDS, LEAGUE_NAMES, cn } from '@/lib/utils';
 import {
@@ -13,12 +13,11 @@ const COLORS = ['#10b981', '#6b7280', '#3b82f6'];
 
 export default function IstatistiklerPage() {
   const [selectedLeague, setSelectedLeague] = useState(203);
-  const { data: todayFixtures } = useTodayFixtures();
-  const { data: tomorrowFixtures } = useTomorrowFixtures();
+  const { data: weekFixtures } = useWeekFixtures();
   const { data: allPredictions } = useAllPredictions();
   const { data: allStandings } = useAllStandings();
 
-  const allFixtures = [...(todayFixtures ?? []), ...(tomorrowFixtures ?? [])];
+  const allFixtures = Object.values(weekFixtures ?? {}).flat();
 
   // Prediction distribution (home/draw/away) across all fixtures with predictions
   const predDist = { home: 0, draw: 0, away: 0 };
@@ -48,13 +47,13 @@ export default function IstatistiklerPage() {
 
   // Standing form data for selected league
   const standings = allStandings?.[selectedLeague]?.[0] ?? [];
-  const formChartData = standings.slice(0, 10).map((entry) => {
+  const formChartData = standings.slice(0, 10).filter((entry) => entry?.team).map((entry) => {
     const form = entry.form ?? '';
     const wins = form.split('').filter((c) => c === 'W').length;
     const draws = form.split('').filter((c) => c === 'D').length;
     const losses = form.split('').filter((c) => c === 'L').length;
     return {
-      name: entry.team.name.slice(0, 10),
+      name: (entry.team.name ?? '').slice(0, 10),
       G: wins,
       B: draws,
       M: losses,
