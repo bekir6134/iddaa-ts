@@ -52,6 +52,15 @@ export async function getFixturesNext(leagueId: number, count = 20): Promise<Api
   });
 }
 
+// Son oynanan N maçı çek (free plan için — next parametresi desteklenmiyor)
+export async function getFixturesLast(leagueId: number, count = 20): Promise<ApiResponse<Fixture>> {
+  return apiFetch<Fixture>('/fixtures', {
+    league: leagueId,
+    season: SEASON,
+    last: count,
+  });
+}
+
 export async function getH2H(team1Id: number, team2Id: number, last = 10): Promise<ApiResponse<Fixture>> {
   return apiFetch<Fixture>('/fixtures/headtohead', {
     h2h: `${team1Id}-${team2Id}`,

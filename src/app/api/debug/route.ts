@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getStandings, getFixturesNext } from '@/lib/api-football';
+import { getStandings, getFixturesLast } from '@/lib/api-football';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
   try {
     const [standingsRes, fixturesRes] = await Promise.all([
       getStandings(203),      // Süper Lig
-      getFixturesNext(203, 5), // Süper Lig next 5
+      getFixturesLast(203, 5), // Süper Lig last 5
     ]);
 
     return NextResponse.json({
