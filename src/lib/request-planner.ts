@@ -1,4 +1,5 @@
 import * as api from './api-football';
+// Not: Free plan `next` parametresini desteklemiyor. getFixturesLast kullanılıyor.
 import { saveCache, getCache } from './data-cache';
 import type { AppCache, CacheMeta } from '@/types/cache';
 import type { Fixture } from '@/types/api-football';
@@ -71,8 +72,8 @@ export async function runDailyRefresh(): Promise<RefreshResult> {
 
   for (const leagueId of ALL_LEAGUE_IDS) {
     if (!canRequest()) break;
-    const res = await safe(`fixtures-next7-${leagueId}`, () =>
-      api.getFixturesNext(leagueId, 20)
+    const res = await safe(`fixtures-last20-${leagueId}`, () =>
+      api.getFixturesLast(leagueId, 20)
     );
     if (res?.response?.length) {
       const fixtures = res.response;
@@ -86,7 +87,19 @@ export async function runDailyRefresh(): Promise<RefreshResult> {
     }
   }
 
-  cache.fixtures = { today: todayFixtures, tomorrow: tomorrowFixtures, byLeague: allByLeague };
+  // byDate: tüm maçları tarih bazında grupla
+  const byDate: Record<string, Fixture[]> = {};
+  for (const fixtures of Object.values(allByLeague)) {
+    for (const f of fixtures) {
+      const d = f.fixture.date?.slice(0, 10);
+      if (d) {
+        if (!byDate[d]) byDate[d] = [];
+        byDate[d].push(f);
+      }
+    }
+  }
+
+  cache.fixtures = { today: todayFixtures, tomorrow: tomorrowFixtures, byLeague: allByLeague, byDate };
   await saveCache('fixtures', cache.fixtures);
 
   // ── Phase 4: Injuries (8 leagues) ───────────────────────────────────────────

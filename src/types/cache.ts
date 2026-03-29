@@ -26,6 +26,7 @@ export interface FixturesCache {
   today: Fixture[];
   tomorrow: Fixture[];
   byLeague: Record<number, Fixture[]>;
+  byDate: Record<string, Fixture[]>; // key = "YYYY-MM-DD"
 }
 
 export interface OddsCache {

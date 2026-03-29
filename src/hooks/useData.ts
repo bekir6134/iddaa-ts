@@ -35,6 +35,13 @@ export function useTomorrowFixtures() {
   });
 }
 
+export function useWeekFixtures() {
+  return useQuery<Record<string, Fixture[]>>({
+    queryKey: ['fixtures', 'week'],
+    queryFn: () => fetcher('/api/data/fixtures?week=1'),
+  });
+}
+
 export function useLeagueFixtures(leagueId: number | null) {
   return useQuery<Fixture[]>({
     queryKey: ['fixtures', 'league', leagueId],

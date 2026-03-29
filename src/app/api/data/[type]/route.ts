@@ -36,10 +36,12 @@ export async function GET(
         return NextResponse.json(cache.meta, { headers });
 
       case 'fixtures': {
-        const day = searchParams.get('day'); // 'today' | 'tomorrow' | undefined
+        const day = searchParams.get('day'); // 'today' | 'tomorrow' | 'YYYY-MM-DD'
         if (day === 'today') return NextResponse.json(cache.fixtures.today, { headers });
         if (day === 'tomorrow') return NextResponse.json(cache.fixtures.tomorrow, { headers });
+        if (day) return NextResponse.json(cache.fixtures.byDate?.[day] ?? [], { headers });
         if (leagueId) return NextResponse.json(cache.fixtures.byLeague[leagueId] ?? [], { headers });
+        if (searchParams.get('week')) return NextResponse.json(cache.fixtures.byDate ?? {}, { headers });
         return NextResponse.json(cache.fixtures, { headers });
       }
 
