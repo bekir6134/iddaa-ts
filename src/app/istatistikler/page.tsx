@@ -23,20 +23,15 @@ export default function IstatistiklerPage() {
   const predDist = { home: 0, draw: 0, away: 0 };
   let predCount = 0;
   for (const [, pred] of Object.entries(allPredictions ?? {})) {
-    const h = parseFloat(pred.predictions.percent.home);
-    const d = parseFloat(pred.predictions.percent.draw);
-    const a = parseFloat(pred.predictions.percent.away);
-    if (pred.predictions.winner?.id) {
-      const fid = pred.fixture.id;
-      const fixture = allFixtures.find((f) => f.fixture.id === fid);
-      if (fixture) {
-        if (pred.predictions.winner.id === fixture.teams.home.id) predDist.home++;
-        else if (pred.predictions.winner.id === fixture.teams.away.id) predDist.away++;
-        else predDist.draw++;
-        predCount++;
-      }
-    }
-    void h; void d; void a;
+    if (!pred?.predictions?.winner?.id) continue;
+    const fid = pred.fixture?.id;
+    if (!fid) continue;
+    const fixture = allFixtures.find((f) => f.fixture?.id === fid);
+    if (!fixture?.teams?.home?.id || !fixture?.teams?.away?.id) continue;
+    if (pred.predictions.winner.id === fixture.teams.home.id) predDist.home++;
+    else if (pred.predictions.winner.id === fixture.teams.away.id) predDist.away++;
+    else predDist.draw++;
+    predCount++;
   }
 
   const pieData = [
@@ -63,9 +58,9 @@ export default function IstatistiklerPage() {
   // Goals per league
   const goalsData = Object.entries(allStandings ?? {}).map(([idStr, groups]) => {
     const id = Number(idStr);
-    const entries = groups?.[0] ?? [];
-    const totalGoals = entries.reduce((acc, e) => acc + e.all.goals.for + e.all.goals.against, 0);
-    const totalMatches = entries.reduce((acc, e) => acc + e.all.played, 0) / 2;
+    const entries = (groups?.[0] ?? []).filter((e) => e?.all?.goals);
+    const totalGoals = entries.reduce((acc, e) => acc + (e.all.goals.for ?? 0) + (e.all.goals.against ?? 0), 0);
+    const totalMatches = entries.reduce((acc, e) => acc + (e.all.played ?? 0), 0) / 2;
     return {
       name: LEAGUE_NAMES[id]?.slice(0, 10) ?? `Lig ${id}`,
       avg: totalMatches > 0 ? Math.round((totalGoals / totalMatches) * 10) / 10 : 0,
