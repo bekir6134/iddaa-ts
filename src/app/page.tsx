@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useTodayFixtures, useTomorrowFixtures, useAllOdds, useAllPredictions, useAllInjuries, useMeta } from '@/hooks/useData';
+import { useState, useMemo } from 'react';
+import { useWeekFixtures, useAllOdds, useAllPredictions, useAllInjuries, useMeta } from '@/hooks/useData';
 import { MatchCard } from '@/components/dashboard/MatchCard';
 import { StatsBar } from '@/components/dashboard/StatsBar';
 import { LeagueFilter } from '@/components/dashboard/LeagueFilter';
@@ -9,36 +9,58 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Download, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import type { Fixture } from '@/types/api-football';
+
+function formatTabLabel(dateStr: string): string {
+  const date = new Date(dateStr + 'T00:00:00');
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(today.getDate() + 1);
+
+  if (date.getTime() === today.getTime()) return 'Bugün';
+  if (date.getTime() === tomorrow.getTime()) return 'Yarın';
+  return date.toLocaleDateString('tr-TR', { weekday: 'short', day: 'numeric', month: 'short' });
+}
 
 export default function DashboardPage() {
   const [leagueFilter, setLeagueFilter] = useState<number>(0);
 
-  const { data: todayFixtures, isLoading: loadingToday } = useTodayFixtures();
-  const { data: tomorrowFixtures, isLoading: loadingTomorrow } = useTomorrowFixtures();
+  const { data: weekFixtures, isLoading } = useWeekFixtures();
   const { data: allOdds } = useAllOdds();
   const { data: allPredictions } = useAllPredictions();
   const { data: allInjuries } = useAllInjuries();
   const { data: meta } = useMeta();
 
-  const filterFixtures = (fixtures: typeof todayFixtures) => {
-    if (!fixtures) return [];
-    if (leagueFilter === 0) return fixtures;
-    return fixtures.filter((f) => f.league.id === leagueFilter);
-  };
+  const sortedDates = useMemo(() => {
+    if (!weekFixtures) return [];
+    return Object.keys(weekFixtures).sort();
+  }, [weekFixtures]);
 
-  const todayFiltered = filterFixtures(todayFixtures);
-  const tomorrowFiltered = filterFixtures(tomorrowFixtures);
+  const allFixtures = useMemo((): Fixture[] => {
+    if (!weekFixtures) return [];
+    return Object.values(weekFixtures).flat();
+  }, [weekFixtures]);
 
   const leagueCounts: Record<number, number> = {};
-  [...(todayFixtures ?? []), ...(tomorrowFixtures ?? [])].forEach((f) => {
+  allFixtures.forEach((f) => {
     leagueCounts[f.league.id] = (leagueCounts[f.league.id] ?? 0) + 1;
   });
+
+  const filter = (arr: Fixture[]) =>
+    leagueFilter === 0 ? arr : arr.filter((f) => f.league.id === leagueFilter);
 
   const injuriesCount = Object.values(allInjuries?.byLeague ?? {}).reduce(
     (acc, arr) => acc + arr.length, 0
   );
 
-  const noData = !loadingToday && !loadingTomorrow && (todayFixtures?.length ?? 0) === 0;
+  const todayCount = useMemo(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    return weekFixtures?.[today]?.length ?? 0;
+  }, [weekFixtures]);
+
+  const noData = !isLoading && allFixtures.length === 0;
+  const defaultTab = sortedDates[0] ?? '';
 
   return (
     <div>
@@ -58,7 +80,7 @@ export default function DashboardPage() {
       {meta && (
         <StatsBar
           meta={meta}
-          todayCount={todayFixtures?.length ?? 0}
+          todayCount={todayCount}
           predictionsCount={Object.keys(allPredictions ?? {}).length}
           injuriesCount={injuriesCount}
         />
@@ -76,40 +98,51 @@ export default function DashboardPage() {
 
       <LeagueFilter selected={leagueFilter} onChange={setLeagueFilter} counts={leagueCounts} />
 
-      <Tabs defaultValue="today">
-        <TabsList className="bg-slate-800 mb-4">
-          <TabsTrigger value="today" className="data-[state=active]:bg-emerald-600 data-[state=active]:text-white">
-            Bugün {todayFiltered.length > 0 && `(${todayFiltered.length})`}
-          </TabsTrigger>
-          <TabsTrigger value="tomorrow" className="data-[state=active]:bg-emerald-600 data-[state=active]:text-white">
-            Yarın {tomorrowFiltered.length > 0 && `(${tomorrowFiltered.length})`}
-          </TabsTrigger>
-        </TabsList>
+      {isLoading ? (
+        <MatchGridSkeleton />
+      ) : sortedDates.length === 0 ? null : (
+        <Tabs defaultValue={defaultTab}>
+          <TabsList className="bg-slate-800 mb-4 flex-wrap h-auto gap-1">
+            {sortedDates.map((date) => {
+              const filtered = filter(weekFixtures?.[date] ?? []);
+              return (
+                <TabsTrigger
+                  key={date}
+                  value={date}
+                  className="data-[state=active]:bg-emerald-600 data-[state=active]:text-white"
+                >
+                  {formatTabLabel(date)}
+                  {filtered.length > 0 && (
+                    <span className="ml-1 text-xs opacity-70">({filtered.length})</span>
+                  )}
+                </TabsTrigger>
+              );
+            })}
+          </TabsList>
 
-        <TabsContent value="today">
-          {loadingToday ? <MatchGridSkeleton /> : todayFiltered.length === 0 ? (
-            <EmptyState message="Bugün için maç bulunamadı" />
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {todayFiltered.map((f) => (
-                <MatchCard key={f.fixture.id} fixture={f} odds={allOdds?.[f.fixture.id]} prediction={allPredictions?.[f.fixture.id]} />
-              ))}
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="tomorrow">
-          {loadingTomorrow ? <MatchGridSkeleton /> : tomorrowFiltered.length === 0 ? (
-            <EmptyState message="Yarın için maç bulunamadı" />
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {tomorrowFiltered.map((f) => (
-                <MatchCard key={f.fixture.id} fixture={f} odds={allOdds?.[f.fixture.id]} prediction={allPredictions?.[f.fixture.id]} />
-              ))}
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+          {sortedDates.map((date) => {
+            const fixtures = filter(weekFixtures?.[date] ?? []);
+            return (
+              <TabsContent key={date} value={date}>
+                {fixtures.length === 0 ? (
+                  <EmptyState message="Bu gün için maç bulunamadı" />
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                    {fixtures.map((f) => (
+                      <MatchCard
+                        key={f.fixture.id}
+                        fixture={f}
+                        odds={allOdds?.[f.fixture.id]}
+                        prediction={allPredictions?.[f.fixture.id]}
+                      />
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+            );
+          })}
+        </Tabs>
+      )}
     </div>
   );
 }
