@@ -72,8 +72,8 @@ export async function runDailyRefresh(): Promise<RefreshResult> {
 
   for (const leagueId of ALL_LEAGUE_IDS) {
     if (!canRequest()) break;
-    const res = await safe(`fixtures-last20-${leagueId}`, () =>
-      api.getFixturesLast(leagueId, 20)
+    const res = await safe(`fixtures-next20-${leagueId}`, () =>
+      api.getFixturesNext(leagueId, 20)
     );
     if (res?.response?.length) {
       const fixtures = res.response;
