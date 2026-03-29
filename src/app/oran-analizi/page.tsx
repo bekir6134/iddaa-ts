@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useTodayFixtures, useTomorrowFixtures, useAllOdds, useAllPredictions } from '@/hooks/useData';
+import { useWeekFixtures, useAllOdds, useAllPredictions } from '@/hooks/useData';
 import { LeagueFilter } from '@/components/dashboard/LeagueFilter';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -14,12 +14,11 @@ export default function OranAnaliziPage() {
   const [leagueFilter, setLeagueFilter] = useState(0);
   const [sortBy, setSortBy] = useState<'time' | 'value'>('value');
 
-  const { data: todayFixtures, isLoading } = useTodayFixtures();
-  const { data: tomorrowFixtures } = useTomorrowFixtures();
+  const { data: weekFixtures, isLoading } = useWeekFixtures();
   const { data: allOdds } = useAllOdds();
   const { data: allPredictions } = useAllPredictions();
 
-  const allFixtures = [...(todayFixtures ?? []), ...(tomorrowFixtures ?? [])];
+  const allFixtures = Object.values(weekFixtures ?? {}).flat();
 
   const filtered = allFixtures.filter((f) =>
     leagueFilter === 0 ? true : f.league.id === leagueFilter
