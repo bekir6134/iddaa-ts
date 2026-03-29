@@ -2,7 +2,7 @@ import type { ApiResponse, Fixture, FixtureOdds, FixturePrediction, InjuryRecord
 import { getTurkeyDate } from './utils';
 
 const BASE_URL = 'https://api-football-v1.p.rapidapi.com/v3';
-const SEASON = process.env.CURRENT_SEASON ?? '2024';
+const SEASON = process.env.CURRENT_SEASON ?? '2025';
 
 function getHeaders() {
   const key = process.env.RAPIDAPI_KEY;
