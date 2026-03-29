@@ -42,6 +42,7 @@ export default function KuponPage() {
         today: todayFixtures!,
         tomorrow: tomorrowFixtures!,
         byLeague: {},
+        byDate: {},
       },
       odds: { byFixture: allOdds! },
       predictions: { byFixture: allPredictions! },
