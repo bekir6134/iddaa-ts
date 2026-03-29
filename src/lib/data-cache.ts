@@ -70,7 +70,7 @@ function emptyCache(): AppCache {
       fixtureCount: 0,
       status: 'stale',
     },
-    fixtures: { today: [], tomorrow: [], byLeague: {} },
+    fixtures: { today: [], tomorrow: [], byLeague: {}, byDate: {} },
     odds: { byFixture: {} },
     predictions: { byFixture: {} },
     injuries: { byLeague: {}, byTeam: {} },
