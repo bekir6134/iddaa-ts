@@ -1,16 +1,14 @@
 import type { ApiResponse, Fixture, FixtureOdds, FixturePrediction, InjuryRecord, StandingEntry, TeamStatistics, FixtureStatTeam } from '@/types/api-football';
 import { getTurkeyDate } from './utils';
 
-const BASE_URL = 'https://api-football-v1.p.rapidapi.com/v3';
+const BASE_URL = 'https://v3.football.api-sports.io';
 const SEASON = process.env.CURRENT_SEASON ?? '2025';
 
 function getHeaders() {
-  const key = process.env.RAPIDAPI_KEY;
-  const host = process.env.RAPIDAPI_HOST ?? 'api-football-v1.p.rapidapi.com';
-  if (!key) throw new Error('RAPIDAPI_KEY env değişkeni tanımlı değil');
+  const key = process.env.API_SPORTS_KEY;
+  if (!key) throw new Error('API_SPORTS_KEY env değişkeni tanımlı değil');
   return {
-    'X-RapidAPI-Key': key,
-    'X-RapidAPI-Host': host,
+    'x-apisports-key': key,
   };
 }
 
