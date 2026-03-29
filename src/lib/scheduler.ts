@@ -35,4 +35,25 @@ export function startScheduler(appUrl: string, cronSecret: string) {
   });
 
   console.log('[Scheduler] Başlatıldı. Her gün 04:00 UTC (07:00 TR) çalışacak.');
+
+  // Startup check: cache boşsa hemen veri çek
+  setTimeout(async () => {
+    try {
+      const metaRes = await fetch(`${appUrl}/api/cron`, { method: 'GET' });
+      const meta = await metaRes.json();
+      if (!meta.lastUpdated || meta.status === 'stale' || meta.fixtureCount === 0) {
+        console.log('[Scheduler] Cache boş, başlangıç verisi çekiliyor...');
+        const res = await fetch(`${appUrl}/api/cron`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${cronSecret}` },
+        });
+        const data = await res.json();
+        console.log('[Scheduler] Başlangıç verisi tamamlandı:', data);
+      } else {
+        console.log(`[Scheduler] Cache güncel (${meta.fixtureCount} maç), veri çekme atlandı.`);
+      }
+    } catch (e) {
+      console.error('[Scheduler] Başlangıç kontrolü hatası:', e);
+    }
+  }, 5000); // Sunucu hazır olsun diye 5 sn bekle
 }
