@@ -49,11 +49,15 @@ export async function runDailyRefresh(): Promise<RefreshResult> {
   }
 
   // ── Phase 1: Standings (8 leagues) ──────────────────────────────────────────
+  // API response format: response[0].league.standings = StandingEntry[][]
   const standingsByLeague: AppCache['standings']['byLeague'] = {};
   for (const leagueId of ALL_LEAGUE_IDS) {
     const res = await safe(`standings-${leagueId}`, () => api.getStandings(leagueId));
     if (res?.response?.length) {
-      standingsByLeague[leagueId] = res.response as unknown as import('@/types/api-football').StandingEntry[][];
+      const leagueData = res.response[0] as unknown as { league: { standings: import('@/types/api-football').StandingEntry[][] } };
+      if (leagueData?.league?.standings) {
+        standingsByLeague[leagueId] = leagueData.league.standings;
+      }
     }
   }
   cache.standings = { byLeague: standingsByLeague };
