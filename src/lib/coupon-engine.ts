@@ -287,7 +287,7 @@ function scoreBet(
 // ─── Generate Coupon ──────────────────────────────────────────────────────────
 
 export function generateCoupon(filters: CouponFilters, cache: AppCache): GeneratedCoupon {
-  const allFixtures = [...cache.fixtures.today, ...cache.fixtures.tomorrow];
+  const allFixtures = Object.values(cache.fixtures.byDate ?? {}).flat();
 
   const scored: CouponSelection[] = [];
 
@@ -334,7 +334,7 @@ export function generateCoupon(filters: CouponFilters, cache: AppCache): Generat
 }
 
 export function rankSelections(cache: AppCache, betTypes: BetType[] = ['1X2', 'Over2.5', 'BTTS']): CouponSelection[] {
-  const allFixtures = [...cache.fixtures.today, ...cache.fixtures.tomorrow];
+  const allFixtures = Object.values(cache.fixtures.byDate ?? {}).flat();
   const scored: CouponSelection[] = [];
 
   for (const fixture of allFixtures) {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { useAllOdds, useAllPredictions, useTodayFixtures, useTomorrowFixtures, useAllInjuries, useH2H } from '@/hooks/useData';
+import { useAllOdds, useAllPredictions, useWeekFixtures, useAllInjuries } from '@/hooks/useData';
 import { generateCoupon } from '@/lib/coupon-engine';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -23,13 +23,12 @@ export default function KuponPage() {
   const [generating, setGenerating] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const { data: todayFixtures } = useTodayFixtures();
-  const { data: tomorrowFixtures } = useTomorrowFixtures();
+  const { data: weekFixtures } = useWeekFixtures();
   const { data: allOdds } = useAllOdds();
   const { data: allPredictions } = useAllPredictions();
   const { data: allInjuries } = useAllInjuries();
 
-  const isLoaded = !!(todayFixtures && tomorrowFixtures && allOdds && allPredictions);
+  const isLoaded = !!(weekFixtures && allOdds && allPredictions);
 
   const handleGenerate = useCallback(() => {
     if (!isLoaded) return;
@@ -39,10 +38,10 @@ export default function KuponPage() {
     const cache: AppCache = {
       meta: { lastUpdated: '', nextUpdate: '', requestsUsed: 0, requestBudget: 100, leagues: [], fixtureCount: 0, status: 'ok' },
       fixtures: {
-        today: todayFixtures!,
-        tomorrow: tomorrowFixtures!,
+        today: [],
+        tomorrow: [],
         byLeague: {},
-        byDate: {},
+        byDate: weekFixtures ?? {},
       },
       odds: { byFixture: allOdds! },
       predictions: { byFixture: allPredictions! },
@@ -57,7 +56,7 @@ export default function KuponPage() {
       setCoupon(result);
       setGenerating(false);
     }, 300);
-  }, [filters, isLoaded, todayFixtures, tomorrowFixtures, allOdds, allPredictions, allInjuries]);
+  }, [filters, isLoaded, weekFixtures, allOdds, allPredictions, allInjuries]);
 
   const handleCopy = () => {
     if (!coupon) return;
