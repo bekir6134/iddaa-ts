@@ -7,7 +7,6 @@ import { ArrowLeft } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { useWeekFixtures, useFixtureOdds, useFixturePrediction, useH2H, useTeamInjuries } from '@/hooks/useData';
 import { formatTurkeyDateTime, formatOdd, formToColor, formatScore, cn, LEAGUE_NAMES } from '@/lib/utils';
 import type { Fixture } from '@/types/api-football';
@@ -95,7 +94,8 @@ export default function MatchDetailPage({ params }: { params: Promise<{ fixtureI
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div className="bg-slate-800 border border-slate-700 rounded-xl p-5">
-                <h3 className="font-semibold text-white mb-4">Maç Tahmini</h3>
+                <h3 className="font-semibold text-white mb-1">Maç Tahmini</h3>
+                <p className="text-xs text-slate-500 mb-4">Son form, H2H geçmişi, ev/deplasman istatistikleri ve takım gücüne göre hesaplanır.</p>
                 <div className="space-y-3">
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-400">Kazanma Olasılıkları</span>
@@ -276,12 +276,12 @@ function PredBar({ label, value, color }: { label: string; value: number; color:
   return (
     <div>
       <div className="flex justify-between text-xs text-slate-400 mb-1">
-        <span className="truncate max-w-[140px]">{label}</span>
-        <span className="font-bold text-white">{value}%</span>
+        <span className="truncate max-w-[160px]">{label}</span>
+        <span className="font-bold text-white ml-2 shrink-0">{value}%</span>
       </div>
-      <Progress value={value} className="h-2 bg-slate-700">
-        <div className={`h-full ${color} rounded-full transition-all`} style={{ width: `${value}%` }} />
-      </Progress>
+      <div className="h-2 w-full bg-slate-700 rounded-full overflow-hidden">
+        <div className={`h-full ${color} rounded-full`} style={{ width: `${value}%` }} />
+      </div>
     </div>
   );
 }
