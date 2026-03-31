@@ -58,7 +58,7 @@ export default function OranAnaliziPage() {
           onClick={() => setSortBy('value')}
           className={cn('px-3 py-1.5 rounded-lg text-sm border transition-colors', sortBy === 'value' ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-slate-800 border-slate-700 text-slate-300 hover:border-emerald-500')}
         >
-          Value Bet Sıralı
+          Değer Bahis Sıralı
         </button>
         <button
           onClick={() => setSortBy('time')}
@@ -88,7 +88,7 @@ export default function OranAnaliziPage() {
                   <th className="text-center p-3">2.5 Üst</th>
                   <th className="text-center p-3">2.5 Alt</th>
                   <th className="text-center p-3">KG Var</th>
-                  <th className="text-center p-3">Value</th>
+                  <th className="text-center p-3">Değer</th>
                 </tr>
               </thead>
               <tbody>
@@ -146,7 +146,7 @@ export default function OranAnaliziPage() {
                       <OddCell value={bttsYes} highlight={!!isBttsValue} />
                       <td className="p-3 text-center">
                         {hasAnyValue ? (
-                          <Badge className="bg-yellow-600 text-white text-xs">Value</Badge>
+                          <Badge className="bg-yellow-600 text-white text-xs">Değer</Badge>
                         ) : (
                           <span className="text-slate-600">-</span>
                         )}

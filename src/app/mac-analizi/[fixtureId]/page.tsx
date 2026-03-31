@@ -133,7 +133,7 @@ export default function MatchDetailPage({ params }: { params: Promise<{ fixtureI
                       if (typeof val !== 'object') return null;
                       const labelMap: Record<string, string> = {
                         form: 'Form', att: 'Atak', def: 'Savunma',
-                        poisson_distribution: 'Poisson', h2h: 'H2H',
+                        poisson_distribution: 'Dağılım', h2h: 'Karşılaşma',
                         goals: 'Goller', total: 'Toplam',
                       };
                       const homeVal = parseFloat(val.home);
@@ -255,8 +255,9 @@ function TeamDisplay({ team, highlight, reverse }: { team: Fixture['teams']['hom
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const map: Record<string, string> = { FT: 'bg-slate-600', NS: 'bg-blue-600', '1H': 'bg-green-600', '2H': 'bg-green-600', HT: 'bg-yellow-600' };
-  return <Badge className={`${map[status] ?? 'bg-slate-600'} text-white text-xs`}>{status}</Badge>;
+  const colorMap: Record<string, string> = { FT: 'bg-slate-600', NS: 'bg-blue-600', '1H': 'bg-green-600', '2H': 'bg-green-600', HT: 'bg-yellow-600' };
+  const labelMap: Record<string, string> = { FT: 'Bitti', NS: 'Başlamadı', '1H': '1. Yarı', '2H': '2. Yarı', HT: 'Devre Arası' };
+  return <Badge className={`${colorMap[status] ?? 'bg-slate-600'} text-white text-xs`}>{labelMap[status] ?? status}</Badge>;
 }
 
 function PredBar({ label, value, color }: { label: string; value: number; color: string }) {

@@ -104,11 +104,13 @@ export default function LigTabloPage() {
 
 function FormDots({ form }: { form: string }) {
   const colorMap: Record<string, string> = { W: 'bg-emerald-500', D: 'bg-yellow-500', L: 'bg-red-500' };
+  const labelMap: Record<string, string> = { W: 'G', D: 'B', L: 'M' };
+  const titleMap: Record<string, string> = { W: 'Galibiyet', D: 'Beraberlik', L: 'Mağlubiyet' };
   return (
     <div className="flex gap-1 justify-center">
       {form.slice(-5).split('').map((c, i) => (
-        <span key={i} title={c} className={cn('w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white', colorMap[c] ?? 'bg-slate-600')}>
-          {c}
+        <span key={i} title={titleMap[c] ?? c} className={cn('w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white', colorMap[c] ?? 'bg-slate-600')}>
+          {labelMap[c] ?? c}
         </span>
       ))}
     </div>

@@ -86,7 +86,7 @@ export function MatchCard({ fixture, odds, prediction }: MatchCardProps) {
                 {fixture.goals.home} - {fixture.goals.away}
               </span>
             ) : (
-              <span className="text-xs text-slate-500 font-medium">vs</span>
+              <span className="text-xs text-slate-500 font-medium">-</span>
             )}
           </div>
 
