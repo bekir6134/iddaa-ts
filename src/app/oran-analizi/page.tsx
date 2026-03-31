@@ -42,6 +42,15 @@ export default function OranAnaliziPage() {
       <h1 className="text-2xl font-bold text-white mb-2">Oran Analizi</h1>
       <p className="text-slate-400 text-sm mb-6">Bookmaker oranları ve value bet tespiti</p>
 
+      {/* Açıklama */}
+      <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 mb-4 text-sm text-slate-400 space-y-1">
+        <p><span className="text-yellow-400 font-semibold">Sarı (Value Bet)</span> — Bookmaker oranının gerçek olasılıktan düşük olduğunu gösterir. API tahminiyle implied probability arasındaki fark &gt;%5 ise işaretlenir.</p>
+        <p><span className="text-slate-200 font-semibold">1 / X / 2</span> — Ev sahibi kazanır / Beraberlik / Deplasman kazanır</p>
+        <p><span className="text-slate-200 font-semibold">2.5 Üst</span> — Maçta 3 veya daha fazla gol atılır</p>
+        <p><span className="text-slate-200 font-semibold">2.5 Alt</span> — Maçta 2 veya daha az gol atılır</p>
+        <p><span className="text-slate-200 font-semibold">KG Var</span> — Her iki takım da en az 1 gol atar (Karşılıklı Gol)</p>
+      </div>
+
       <LeagueFilter selected={leagueFilter} onChange={setLeagueFilter} counts={counts} />
 
       <div className="flex gap-2 mb-4">
@@ -100,9 +109,22 @@ export default function OranAnaliziPage() {
                   const bttsYes = btts?.values?.find((v) => v.value === 'Yes')?.odd;
 
                   const homePct = pred ? percentToFloat(pred.predictions.percent.home) : 0;
+                  const drawPct = pred ? percentToFloat(pred.predictions.percent.draw) : 0;
                   const awayPct = pred ? percentToFloat(pred.predictions.percent.away) : 0;
+                  // Üst/Alt ve KG tahmini: under_over ve goals alanlarından
+                  const underOverLabel = pred?.predictions?.under_over ?? '';
+                  const over25Pct = underOverLabel === 'Over' ? 0.65 : underOverLabel === 'Under' ? 0.35 : 0;
+                  const under25Pct = underOverLabel === 'Under' ? 0.65 : underOverLabel === 'Over' ? 0.35 : 0;
+                  // KG Var: iki takım da gol atacaksa homePct + awayPct yüksek demek
+                  const bttsPct = homePct > 0 && awayPct > 0 ? Math.min(homePct, awayPct) * 1.5 : 0;
+
                   const isHomeValue = odd1 && homePct > 0 && isValueBet(parseFloat(odd1), homePct);
+                  const isDrawValue = oddX && drawPct > 0 && isValueBet(parseFloat(oddX), drawPct);
                   const isAwayValue = odd2 && awayPct > 0 && isValueBet(parseFloat(odd2), awayPct);
+                  const isOver25Value = over25 && over25Pct > 0 && isValueBet(parseFloat(over25), over25Pct);
+                  const isUnder25Value = under25 && under25Pct > 0 && isValueBet(parseFloat(under25), under25Pct);
+                  const isBttsValue = bttsYes && bttsPct > 0 && isValueBet(parseFloat(bttsYes), bttsPct);
+                  const hasAnyValue = isHomeValue || isDrawValue || isAwayValue || isOver25Value || isUnder25Value || isBttsValue;
 
                   return (
                     <tr key={f.fixture.id} className={cn('border-b border-slate-700/50', i % 2 === 0 ? '' : 'bg-slate-800/50')}>
@@ -117,13 +139,13 @@ export default function OranAnaliziPage() {
                       </td>
                       <td className="p-3 text-center text-slate-400 font-mono text-xs">{formatTurkeyTime(f.fixture.date)}</td>
                       <OddCell value={odd1} highlight={!!isHomeValue} />
-                      <OddCell value={oddX} />
+                      <OddCell value={oddX} highlight={!!isDrawValue} />
                       <OddCell value={odd2} highlight={!!isAwayValue} />
-                      <OddCell value={over25} />
-                      <OddCell value={under25} />
-                      <OddCell value={bttsYes} />
+                      <OddCell value={over25} highlight={!!isOver25Value} />
+                      <OddCell value={under25} highlight={!!isUnder25Value} />
+                      <OddCell value={bttsYes} highlight={!!isBttsValue} />
                       <td className="p-3 text-center">
-                        {(isHomeValue || isAwayValue) ? (
+                        {hasAnyValue ? (
                           <Badge className="bg-yellow-600 text-white text-xs">Value</Badge>
                         ) : (
                           <span className="text-slate-600">-</span>

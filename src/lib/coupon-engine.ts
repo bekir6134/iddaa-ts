@@ -255,7 +255,10 @@ function scoreBet(
   const homeAdvScore = calcHomeAdvantageScore(homeWinPct, betType, selection);
   const injuryScore = calcInjuryImpact(injuryCount);
 
-  const total = Math.max(0, predScore + formScore + h2hScore + homeAdvScore + injuryScore);
+  // Prediction yoksa odds güvenilirliğine göre temel skor ekle (max 20)
+  const oddsBaseScore = !pred ? (odd <= 1.5 ? 20 : odd <= 2.0 ? 15 : odd <= 2.5 ? 10 : 5) : 0;
+
+  const total = Math.max(0, predScore + oddsBaseScore + formScore + h2hScore + homeAdvScore + injuryScore);
 
   const breakdown: ScoreBreakdown = {
     predictionScore: predScore,
