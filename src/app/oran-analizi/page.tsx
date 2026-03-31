@@ -14,9 +14,10 @@ export default function OranAnaliziPage() {
   const [leagueFilter, setLeagueFilter] = useState(0);
   const [sortBy, setSortBy] = useState<'time' | 'value'>('value');
 
-  const { data: weekFixtures, isLoading } = useWeekFixtures();
-  const { data: allOdds } = useAllOdds();
+  const { data: weekFixtures, isLoading: loadingFixtures } = useWeekFixtures();
+  const { data: allOdds, isLoading: loadingOdds } = useAllOdds();
   const { data: allPredictions } = useAllPredictions();
+  const isLoading = loadingFixtures || loadingOdds;
 
   const allFixtures = Object.values(weekFixtures ?? {}).flat();
 

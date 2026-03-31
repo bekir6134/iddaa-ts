@@ -106,16 +106,28 @@ export default function MatchDetailPage({ params }: { params: Promise<{ fixtureI
                     <PredBar label={away.name} value={parseFloat(pred!.percent.away)} color="bg-blue-500" />
                   </div>
                   <div className="pt-3 border-t border-slate-700">
-                    <p className="text-slate-400 text-xs mb-1">Tavsiye</p>
-                    <p className="text-emerald-400 font-medium">{pred!.advice}</p>
+                    <p className="text-slate-400 text-xs mb-1">Tahmin Özeti</p>
+                    <p className="text-emerald-400 font-medium text-sm">
+                      {pred!.winner?.name
+                        ? `${pred!.winner.name} kazanır`
+                        : 'Beraberlik bekleniyor'}
+                    </p>
                   </div>
                   {pred!.under_over && (
                     <div>
                       <p className="text-slate-400 text-xs mb-1">Alt/Üst Tahmini</p>
-                      <Badge className="bg-blue-600">{pred!.under_over}</Badge>
+                      <Badge className={Number(pred!.under_over) < 0 ? 'bg-slate-600' : 'bg-blue-600'}>
+                        {Number(pred!.under_over) < 0
+                          ? `${Math.abs(Number(pred!.under_over))} Alt`
+                          : `${pred!.under_over} Üst`}
+                      </Badge>
                     </div>
                   )}
-                  {pred!.goals && (
+                  {pred!.goals &&
+                    pred!.goals.home !== null &&
+                    pred!.goals.away !== null &&
+                    Number(pred!.goals.home) >= 0 &&
+                    Number(pred!.goals.away) >= 0 && (
                     <div>
                       <p className="text-slate-400 text-xs mb-1">Tahmini Skor</p>
                       <span className="text-white font-bold">{pred!.goals.home} - {pred!.goals.away}</span>
