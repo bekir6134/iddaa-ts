@@ -205,26 +205,35 @@ function scoreBet(
   cache: AppCache
 ): CouponSelection | null {
   const pred = cache.predictions.byFixture[fixture.fixture.id];
-  if (!pred) return null;
 
-  const p = pred.predictions;
-  const homePct = percentToFloat(p.percent.home) * 100;
-  const drawPct = percentToFloat(p.percent.draw) * 100;
-  const awayPct = percentToFloat(p.percent.away) * 100;
+  // Prediction olmadan odds bazlı winner tahmin et
+  let winner: 'home' | 'away' | null = null;
+  let homePct = 0, drawPct = 0, awayPct = 0;
+  let homeForm = '', awayForm = '';
 
-  // Determine predicted winner direction
-  const winner: 'home' | 'away' | null =
-    p.winner?.id === fixture.teams.home.id ? 'home' :
-    p.winner?.id === fixture.teams.away.id ? 'away' : null;
+  if (pred) {
+    const p = pred.predictions;
+    homePct = percentToFloat(p.percent.home) * 100;
+    drawPct = percentToFloat(p.percent.draw) * 100;
+    awayPct = percentToFloat(p.percent.away) * 100;
+    winner = p.winner?.id === fixture.teams.home.id ? 'home' :
+             p.winner?.id === fixture.teams.away.id ? 'away' : null;
+    homeForm = pred.teams.home.last_5?.form ?? '';
+    awayForm = pred.teams.away.last_5?.form ?? '';
+  } else {
+    // Prediction yok — odds'tan winner tahmin et
+    const bets = cache.odds.byFixture[fixture.fixture.id]?.bookmakers?.[0]?.bets ?? [];
+    const mw = bets.find((b) => b.name === 'Match Winner');
+    const homeOdd = parseFloat(mw?.values?.find((v) => v.value === 'Home')?.odd ?? '99');
+    const awayOdd = parseFloat(mw?.values?.find((v) => v.value === 'Away')?.odd ?? '99');
+    if (homeOdd < awayOdd) { winner = 'home'; homePct = Math.round((1 / homeOdd) * 100); }
+    else if (awayOdd < homeOdd) { winner = 'away'; awayPct = Math.round((1 / awayOdd) * 100); }
+  }
 
   const selection = getSelectionLabel(betType, winner);
 
   const odd = getOddForBet(betType, selection, cache, fixture.fixture.id);
   if (!odd) return null;
-
-  // Team form
-  const homeForm = pred.teams.home.last_5?.form ?? '';
-  const awayForm = pred.teams.away.last_5?.form ?? '';
 
   // H2H
   const h2hKey = `${fixture.teams.home.id}_${fixture.teams.away.id}`;
@@ -240,7 +249,7 @@ function scoreBet(
   const winnerId = winner === 'home' ? fixture.teams.home.id : fixture.teams.away.id;
   const injuryCount = (cache.injuries.byTeam[winnerId] ?? []).length;
 
-  const predScore = calcPredictionScore(homePct, drawPct, awayPct, betType, selection, p.advice);
+  const predScore = pred ? calcPredictionScore(homePct, drawPct, awayPct, betType, selection, pred.predictions.advice) : 0;
   const formScore = calcFormScore(homeForm, awayForm, betType, selection);
   const h2hScore = calcH2HScore(h2hFixtures, fixture.teams.home.id, betType, selection);
   const homeAdvScore = calcHomeAdvantageScore(homeWinPct, betType, selection);

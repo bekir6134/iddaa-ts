@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { useTodayFixtures, useTomorrowFixtures, useFixtureOdds, useFixturePrediction, useH2H, useTeamInjuries } from '@/hooks/useData';
+import { useWeekFixtures, useFixtureOdds, useFixturePrediction, useH2H, useTeamInjuries } from '@/hooks/useData';
 import { formatTurkeyDateTime, formatOdd, formToColor, formatScore, cn, LEAGUE_NAMES } from '@/lib/utils';
 import type { Fixture } from '@/types/api-football';
 
@@ -16,12 +16,11 @@ export default function MatchDetailPage({ params }: { params: Promise<{ fixtureI
   const { fixtureId: fixtureIdStr } = use(params);
   const fixtureId = Number(fixtureIdStr);
 
-  const { data: todayFixtures } = useTodayFixtures();
-  const { data: tomorrowFixtures } = useTomorrowFixtures();
+  const { data: weekFixtures } = useWeekFixtures();
   const { data: odds, isLoading: loadingOdds } = useFixtureOdds(fixtureId);
   const { data: prediction, isLoading: loadingPred } = useFixturePrediction(fixtureId);
 
-  const fixture = [...(todayFixtures ?? []), ...(tomorrowFixtures ?? [])].find(
+  const fixture = Object.values(weekFixtures ?? {}).flat().find(
     (f) => f.fixture.id === fixtureId
   );
 
