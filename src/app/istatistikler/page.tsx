@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
 import { useWeekFixtures, useAllPredictions, useAllStandings, useAllOdds, useAllInjuries, useAllH2H, useAllTeamStats } from '@/hooks/useData';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -19,6 +20,13 @@ const COLORS = ['#10b981', '#6b7280', '#3b82f6'];
 
 export default function IstatistiklerPage() {
   const [selectedLeague, setSelectedLeague] = useState(203);
+  const [sortCol, setSortCol] = useState<'score' | 'odds' | 'bet' | 'confidence'>('score');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+
+  const handleSort = (col: typeof sortCol) => {
+    if (sortCol === col) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    else { setSortCol(col); setSortDir('desc'); }
+  };
 
   const { data: weekFixtures, isLoading: loadingFixtures } = useWeekFixtures();
   const { data: allPredictions } = useAllPredictions();
@@ -43,8 +51,24 @@ export default function IstatistiklerPage() {
       standings: { byLeague: {} },
       meta: undefined as never,
     };
-    return rankSelections(cache, ['1X2', 'Over2.5', 'Over1.5', 'BTTS']).slice(0, 20);
+    return rankSelections(cache, ['1X2', 'Over2.5', 'Over1.5', 'BTTS']);
   }, [weekFixtures, allOdds, allPredictions, allInjuries, allH2H, allTeamStats]);
+
+  const sortedPicks = useMemo(() => {
+    const picks = [...topPicks];
+    const dir = sortDir === 'asc' ? 1 : -1;
+    picks.sort((a, b) => {
+      if (sortCol === 'score') return dir * (a.scoreBreakdown.total - b.scoreBreakdown.total);
+      if (sortCol === 'odds') return dir * (a.odds - b.odds);
+      if (sortCol === 'bet') return dir * a.betType.localeCompare(b.betType);
+      if (sortCol === 'confidence') {
+        const order = { high: 3, medium: 2, low: 1 };
+        return dir * ((order[a.confidence] ?? 0) - (order[b.confidence] ?? 0));
+      }
+      return 0;
+    });
+    return picks.slice(0, 20);
+  }, [topPicks, sortCol, sortDir]);
 
   // ── Prediction distribution (bu hafta) ──────────────────────────────────────
   const predDist = { home: 0, draw: 0, away: 0 };
@@ -119,15 +143,15 @@ export default function IstatistiklerPage() {
               <thead>
                 <tr className="text-xs text-slate-400 border-b border-slate-700">
                   <th className="text-left p-3">Maç</th>
-                  <th className="text-center p-3">Bahis</th>
+                  <SortTh label="Bahis" col="bet" sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
                   <th className="text-center p-3">Seçim</th>
-                  <th className="text-center p-3">Oran</th>
-                  <th className="text-left p-3 w-40">Güven Skoru</th>
-                  <th className="text-center p-3">Seviye</th>
+                  <SortTh label="Oran" col="odds" sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
+                  <SortTh label="Güven Skoru" col="score" sortCol={sortCol} sortDir={sortDir} onSort={handleSort} align="left" extraClass="w-40" />
+                  <SortTh label="Seviye" col="confidence" sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
                 </tr>
               </thead>
               <tbody>
-                {topPicks.map((sel, i) => (
+                {sortedPicks.map((sel, i) => (
                   <tr key={`${sel.fixtureId}-${sel.betType}-${i}`} className={cn('border-b border-slate-700/50', i % 2 === 0 ? '' : 'bg-slate-800/50')}>
                     <td className="p-3">
                       <Link href={`/mac-analizi/${sel.fixtureId}`} className="hover:text-emerald-400 transition-colors">
@@ -240,5 +264,31 @@ export default function IstatistiklerPage() {
         )}
       </div>
     </div>
+  );
+}
+
+function SortTh({
+  label, col, sortCol, sortDir, onSort, align = 'center', extraClass = '',
+}: {
+  label: string;
+  col: 'score' | 'odds' | 'bet' | 'confidence';
+  sortCol: string;
+  sortDir: 'asc' | 'desc';
+  onSort: (col: 'score' | 'odds' | 'bet' | 'confidence') => void;
+  align?: 'left' | 'center';
+  extraClass?: string;
+}) {
+  const active = sortCol === col;
+  const Icon = active ? (sortDir === 'desc' ? ChevronDown : ChevronUp) : ChevronsUpDown;
+  return (
+    <th
+      className={cn(`p-3 cursor-pointer select-none hover:text-white transition-colors ${extraClass}`, align === 'left' ? 'text-left' : 'text-center')}
+      onClick={() => onSort(col)}
+    >
+      <span className="inline-flex items-center gap-0.5">
+        {label}
+        <Icon size={12} className={active ? 'text-emerald-400' : 'text-slate-600'} />
+      </span>
+    </th>
   );
 }
