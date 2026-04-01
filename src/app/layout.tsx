@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Geist } from 'next/font/google';
+import { Inter } from 'next/font/google';
 import './globals.css';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
@@ -7,7 +7,7 @@ import { QueryProvider } from '@/components/providers/QueryProvider';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { getCacheMeta } from '@/lib/data-cache';
 
-const geist = Geist({ subsets: ['latin'], variable: '--font-geist' });
+const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' });
 
 export const metadata: Metadata = {
   title: 'İddaa Analiz | Maç Tahminleri ve Oran Analizi',
@@ -24,8 +24,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   }
 
   return (
-    <html lang="tr" className={`${geist.variable} h-full antialiased dark`}>
-      <body className="min-h-full flex flex-col bg-slate-950 text-slate-100">
+    <html lang="tr" className={`${inter.variable} h-full antialiased dark`}>
+      <body className={`${inter.className} min-h-full flex flex-col bg-slate-950 text-slate-100`}>
         <QueryProvider>
           <TooltipProvider>
             <Navbar />
