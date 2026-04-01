@@ -6,11 +6,10 @@ import { generateCoupon } from '@/lib/coupon-engine';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Sparkles, X, Info, RefreshCw, Copy, Check } from 'lucide-react';
 import type { AppCache } from '@/types/cache';
-import type { CouponFilters, CouponSelection, GeneratedCoupon, BetType, ConfidenceLevel } from '@/types/coupon';
+import type { CouponFilters, CouponSelection, GeneratedCoupon, BetType } from '@/types/coupon';
 import { DEFAULT_FILTERS, BET_TYPE_LABELS, CONFIDENCE_LABELS, RISK_LABELS } from '@/types/coupon';
 import { formatTurkeyTime, formatOdd, LEAGUE_IDS, LEAGUE_NAMES, cn } from '@/lib/utils';
 import Image from 'next/image';
@@ -18,7 +17,7 @@ import Image from 'next/image';
 const ALL_BET_TYPES: BetType[] = ['1X2', 'Over2.5', 'Over1.5', 'Under2.5', 'BTTS', 'DNB'];
 
 export default function KuponPage() {
-  const [filters, setFilters] = useState<CouponFilters>(DEFAULT_FILTERS);
+  const [filters, setFilters] = useState<CouponFilters>({ ...DEFAULT_FILTERS, minConfidence: 'low' });
   const [coupon, setCoupon] = useState<GeneratedCoupon | null>(null);
   const [generating, setGenerating] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -130,24 +129,6 @@ export default function KuponPage() {
                   </button>
                 ))}
               </div>
-            </div>
-
-            {/* Min Confidence */}
-            <div className="mb-4">
-              <label className="text-xs text-slate-400 mb-2 block">Min. Güven Seviyesi</label>
-              <Select
-                value={filters.minConfidence}
-                onValueChange={(v) => setFilters((f) => ({ ...f, minConfidence: v as ConfidenceLevel }))}
-              >
-                <SelectTrigger className="bg-slate-700 border-slate-600 text-slate-200">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-slate-800 border-slate-700">
-                  <SelectItem value="high">Yüksek</SelectItem>
-                  <SelectItem value="medium">Orta</SelectItem>
-                  <SelectItem value="low">Düşük</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
 
             {/* Odds range */}
