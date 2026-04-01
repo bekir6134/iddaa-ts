@@ -86,15 +86,15 @@ export default function SakatlıklarPage() {
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                           {teamInjuries.map((inj) => (
-                            <div key={inj.player.id} className={cn('flex items-start gap-2 text-xs p-2 rounded-lg', inj.type === 'Missing Fixture' ? 'bg-red-900/20 border border-red-900/40' : 'bg-yellow-900/20 border border-yellow-900/40')}>
+                            <div key={inj.player.id} className={cn('flex items-start gap-2 text-xs p-2 rounded-lg', inj.player.type === 'Missing Fixture' ? 'bg-red-900/20 border border-red-900/40' : 'bg-yellow-900/20 border border-yellow-900/40')}>
                               {inj.player.photo && (
                                 <Image src={inj.player.photo} alt={inj.player.name} width={28} height={28} className="rounded-full shrink-0" />
                               )}
                               <div>
                                 <p className="font-medium text-slate-200">{inj.player.name}</p>
-                                <p className="text-slate-500">{inj.reason}</p>
-                                <Badge className={cn('text-[10px] mt-1', inj.type === 'Missing Fixture' ? 'bg-red-600' : 'bg-yellow-600')}>
-                                  {inj.type === 'Missing Fixture' ? 'Yok' : 'Şüpheli'}
+                                <p className="text-slate-500">{inj.player.reason}</p>
+                                <Badge className={cn('text-[10px] mt-1', inj.player.type === 'Missing Fixture' ? 'bg-red-600' : 'bg-yellow-600')}>
+                                  {inj.player.type === 'Missing Fixture' ? 'Yok' : 'Şüpheli'}
                                 </Badge>
                               </div>
                             </div>

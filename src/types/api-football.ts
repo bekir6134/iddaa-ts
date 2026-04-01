@@ -158,6 +158,8 @@ export interface InjuredPlayer {
   id: number;
   name: string;
   photo: string;
+  type?: string;
+  reason?: string;
 }
 
 export interface InjuryRecord {
