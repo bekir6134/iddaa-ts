@@ -5,7 +5,7 @@ import type { AppCache, CacheMeta } from '@/types/cache';
 import type { Fixture } from '@/types/api-football';
 import { ALL_LEAGUE_IDS, LEAGUE_IDS } from './utils';
 
-const REQUEST_SAFETY_LIMIT = 95;
+const REQUEST_SAFETY_LIMIT = 7400;
 
 // ─── Result ───────────────────────────────────────────────────────────────────
 
@@ -144,8 +144,7 @@ export async function runDailyRefresh(): Promise<RefreshResult> {
   // ── Phase 6: Predictions (top 10 fixtures by league priority) ───────────────
   const priorityLeagues = [LEAGUE_IDS.SUPER_LIG, LEAGUE_IDS.CHAMPIONS_LEAGUE, LEAGUE_IDS.PREMIER_LEAGUE, LEAGUE_IDS.LA_LIGA, LEAGUE_IDS.SERIE_A, LEAGUE_IDS.BUNDESLIGA, LEAGUE_IDS.LIGUE_1, LEAGUE_IDS.EUROPA_LEAGUE];
   const predictionFixtures = priorityLeagues
-    .flatMap((id) => allByLeague[id] ?? [])
-    .slice(0, 10);
+    .flatMap((id) => allByLeague[id] ?? []);
 
   const predictionsByFixture: AppCache['predictions']['byFixture'] = {};
 
@@ -161,7 +160,7 @@ export async function runDailyRefresh(): Promise<RefreshResult> {
   await saveCache('predictions', cache.predictions);
 
   // ── Phase 7: H2H (top 5 fixtures) ───────────────────────────────────────────
-  const h2hFixtures = allFixtures.slice(0, 5);
+  const h2hFixtures = allFixtures;
   const h2hByPair: AppCache['h2h']['byFixturePair'] = {};
 
   for (const fixture of h2hFixtures) {
@@ -182,14 +181,12 @@ export async function runDailyRefresh(): Promise<RefreshResult> {
   const teamLeagueMap = new Map<number, number>();
 
   for (const leagueId of priorityLeagues) {
-    for (const fixture of (allByLeague[leagueId] ?? []).slice(0, 2)) {
+    for (const fixture of (allByLeague[leagueId] ?? [])) {
       teamIds.add(fixture.teams.home.id);
       teamIds.add(fixture.teams.away.id);
       teamLeagueMap.set(fixture.teams.home.id, leagueId);
       teamLeagueMap.set(fixture.teams.away.id, leagueId);
-      if (teamIds.size >= 10) break;
     }
-    if (teamIds.size >= 10) break;
   }
 
   const teamStatsById: AppCache['teamStats']['byTeam'] = {};
@@ -218,7 +215,7 @@ export async function runDailyRefresh(): Promise<RefreshResult> {
     lastUpdated: now.toISOString(),
     nextUpdate: nextUpdate.toISOString(),
     requestsUsed,
-    requestBudget: 100,
+    requestBudget: 7500,
     leagues: ALL_LEAGUE_IDS,
     fixtureCount,
     status: errors.length === 0 ? 'ok' : requestsUsed > 0 ? 'partial' : 'error',

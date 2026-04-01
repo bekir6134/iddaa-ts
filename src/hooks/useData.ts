@@ -128,6 +128,13 @@ export function useAllStandings() {
 
 // ─── H2H ──────────────────────────────────────────────────────────────────────
 
+export function useAllH2H() {
+  return useQuery<Record<string, Fixture[]>>({
+    queryKey: ['h2h'],
+    queryFn: () => fetcher('/api/data/h2h'),
+  });
+}
+
 export function useH2H(team1Id: number | null, team2Id: number | null) {
   return useQuery<Fixture[]>({
     queryKey: ['h2h', team1Id, team2Id],
@@ -137,6 +144,13 @@ export function useH2H(team1Id: number | null, team2Id: number | null) {
 }
 
 // ─── Team Stats ───────────────────────────────────────────────────────────────
+
+export function useAllTeamStats() {
+  return useQuery<Record<number, TeamStatistics>>({
+    queryKey: ['team-stats'],
+    queryFn: () => fetcher('/api/data/team-stats'),
+  });
+}
 
 export function useTeamStats(teamId: number | null) {
   return useQuery<TeamStatistics | null>({
