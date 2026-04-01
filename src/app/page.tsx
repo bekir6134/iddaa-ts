@@ -7,7 +7,7 @@ import { StatsBar } from '@/components/dashboard/StatsBar';
 import { LeagueFilter } from '@/components/dashboard/LeagueFilter';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Download, AlertTriangle } from 'lucide-react';
+import { Download, AlertTriangle, Search, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { Fixture } from '@/types/api-football';
 
@@ -26,6 +26,7 @@ function formatTabLabel(dateStr: string): string {
 export default function DashboardPage() {
   const [leagueFilter, setLeagueFilter] = useState<number>(0);
   const [activeDate, setActiveDate] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const { data: weekFixtures, isLoading } = useWeekFixtures();
   const { data: allOdds } = useAllOdds();
@@ -100,6 +101,25 @@ export default function DashboardPage() {
         />
       )}
 
+      <div className="relative mb-4">
+        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+        <input
+          type="text"
+          placeholder="Takım ara..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full bg-slate-800 border border-slate-700 rounded-lg pl-9 pr-9 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+        />
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery('')}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
+          >
+            <X size={14} />
+          </button>
+        )}
+      </div>
+
       {noData && (
         <div className="bg-yellow-900/30 border border-yellow-700 rounded-xl p-6 text-center mb-6">
           <AlertTriangle className="mx-auto mb-2 text-yellow-500" size={32} />
@@ -114,6 +134,29 @@ export default function DashboardPage() {
 
       {isLoading ? (
         <MatchGridSkeleton />
+      ) : searchQuery.trim() ? (
+        (() => {
+          const q = searchQuery.trim().toLowerCase();
+          const results = allFixtures.filter(
+            (f) =>
+              (leagueFilter === 0 || f.league.id === leagueFilter) &&
+              (f.teams.home.name.toLowerCase().includes(q) || f.teams.away.name.toLowerCase().includes(q))
+          );
+          return results.length === 0 ? (
+            <EmptyState message={`"${searchQuery}" için maç bulunamadı`} />
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {results.map((f) => (
+                <MatchCard
+                  key={f.fixture.id}
+                  fixture={f}
+                  odds={allOdds?.[f.fixture.id]}
+                  prediction={allPredictions?.[f.fixture.id]}
+                />
+              ))}
+            </div>
+          );
+        })()
       ) : activeDates.length === 0 ? (
         <EmptyState message="Bu lig için yaklaşan maç bulunamadı" />
       ) : (
