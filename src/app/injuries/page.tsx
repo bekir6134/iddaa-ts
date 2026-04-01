@@ -51,9 +51,18 @@ export default function SakatlıklarPage() {
             const leagueInjuries = injuries?.byLeague[leagueId];
             if (!leagueInjuries?.length) return null;
 
+            // Tekrar eden oyuncuları kaldır (aynı oyuncu birden fazla maç için listelenebiliyor)
+            const seenPlayers = new Set<string>();
+            const uniqueInjuries = leagueInjuries.filter((inj) => {
+              const key = `${inj.team.id}_${inj.player.id}`;
+              if (seenPlayers.has(key)) return false;
+              seenPlayers.add(key);
+              return true;
+            });
+
             // Group by team
             const byTeam: Record<string, typeof leagueInjuries> = {};
-            for (const inj of leagueInjuries) {
+            for (const inj of uniqueInjuries) {
               const key = `${inj.team.id}_${inj.team.name}`;
               if (!byTeam[key]) byTeam[key] = [];
               byTeam[key].push(inj);
@@ -63,7 +72,7 @@ export default function SakatlıklarPage() {
               <div key={leagueId} className="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden">
                 <div className="bg-slate-900 px-4 py-3 flex items-center gap-2 border-b border-slate-700">
                   <span className="font-semibold text-white">{LEAGUE_NAMES[leagueId] ?? `Lig ${leagueId}`}</span>
-                  <Badge className="bg-slate-700 text-slate-300 text-xs">{leagueInjuries.length}</Badge>
+                  <Badge className="bg-slate-700 text-slate-300 text-xs">{uniqueInjuries.length}</Badge>
                 </div>
                 <div className="divide-y divide-slate-700/50">
                   {Object.entries(byTeam).map(([teamKey, teamInjuries]) => {
