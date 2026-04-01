@@ -11,6 +11,7 @@ type DataType =
   | 'standings'
   | 'h2h'
   | 'team-stats'
+  | 'results'
   | 'meta';
 
 export async function GET(
@@ -75,6 +76,11 @@ export async function GET(
       case 'team-stats': {
         if (teamId) return NextResponse.json(cache.teamStats.byTeam[teamId] ?? null, { headers });
         return NextResponse.json(cache.teamStats.byTeam, { headers });
+      }
+
+      case 'results': {
+        if (leagueId) return NextResponse.json(cache.results?.byLeague?.[leagueId] ?? [], { headers });
+        return NextResponse.json(cache.results ?? { byLeague: {}, byFixture: {} }, { headers });
       }
 
       default:

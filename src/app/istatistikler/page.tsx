@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
-import { useWeekFixtures, useAllPredictions, useAllStandings, useAllOdds, useAllInjuries, useAllH2H, useAllTeamStats } from '@/hooks/useData';
+import { useWeekFixtures, useAllPredictions, useAllStandings, useAllOdds, useAllInjuries, useAllH2H, useAllTeamStats, useResults } from '@/hooks/useData';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { LEAGUE_IDS, LEAGUE_NAMES, cn } from '@/lib/utils';
@@ -35,8 +35,51 @@ export default function IstatistiklerPage() {
   const { data: allInjuries } = useAllInjuries();
   const { data: allH2H } = useAllH2H();
   const { data: allTeamStats } = useAllTeamStats();
+  const { data: results } = useResults();
 
   const allFixtures = useMemo(() => Object.values(weekFixtures ?? {}).flat(), [weekFixtures]);
+
+  // ── Tahmin doğruluğu (geçmiş sonuçlar vs predictions) ───────────────────────
+  const accuracy = useMemo(() => {
+    if (!results || !allPredictions) return null;
+    let correct = 0, total = 0;
+    const rows: { home: string; away: string; predicted: string; actual: string; ok: boolean }[] = [];
+    for (const f of Object.values(results.byFixture)) {
+      if (f.fixture.status.short !== 'FT') continue;
+      const pred = allPredictions[f.fixture.id];
+      if (!pred?.predictions?.winner) continue;
+      const winnerId = pred.predictions.winner.id;
+      if (!winnerId) continue;
+      const gh = f.goals.home, ga = f.goals.away;
+      if (gh === null || ga === null) continue;
+      const actualId = gh > ga ? f.teams.home.id : ga > gh ? f.teams.away.id : null;
+      const predicted = winnerId === f.teams.home.id ? f.teams.home.name : f.teams.away.name;
+      const actual = actualId === f.teams.home.id ? f.teams.home.name : actualId === f.teams.away.id ? f.teams.away.name : 'Beraberlik';
+      const ok = actualId === winnerId;
+      if (ok) correct++;
+      total++;
+      rows.push({ home: f.teams.home.name, away: f.teams.away.name, predicted, actual, ok });
+    }
+    return total === 0 ? null : { correct, total, rate: Math.round((correct / total) * 100), rows: rows.slice(0, 15) };
+  }, [results, allPredictions]);
+
+  // ── Gol dağılımı — zaman dilimi (seçili lig, predictions'dan) ────────────────
+  const goalTimeData = useMemo(() => {
+    const slots = ['0-15', '16-30', '31-45', '46-60', '61-75', '76-90', '91-105', '106-120'];
+    const totals: Record<string, number> = {};
+    slots.forEach((s) => { totals[s] = 0; });
+
+    for (const pred of Object.values(allPredictions ?? {})) {
+      if (pred.league?.id !== selectedLeague) continue;
+      for (const side of ['home', 'away'] as const) {
+        const minuteData = pred.teams?.[side]?.league?.goals?.for?.minute ?? {};
+        for (const [slot, val] of Object.entries(minuteData)) {
+          if (slot in totals && val?.total) totals[slot] += val.total;
+        }
+      }
+    }
+    return slots.map((s) => ({ slot: s, goals: totals[s] })).filter((d) => d.goals > 0);
+  }, [allPredictions, selectedLeague]);
 
   // ── Top picks via coupon engine ──────────────────────────────────────────────
   const topPicks = useMemo(() => {
@@ -49,6 +92,7 @@ export default function IstatistiklerPage() {
       h2h: { byFixturePair: allH2H ?? {} },
       teamStats: { byTeam: allTeamStats ?? {} },
       standings: { byLeague: {} },
+      results: { byLeague: {}, byFixture: {} },
       meta: undefined as never,
     };
     return rankSelections(cache, ['1X2', 'Over2.5', 'Over1.5', 'BTTS']);
@@ -263,6 +307,51 @@ export default function IstatistiklerPage() {
           </ResponsiveContainer>
         )}
       </div>
+
+      {/* Gol Dağılımı — Zaman Dilimi */}
+      <div className="bg-slate-800 border border-slate-700 rounded-xl p-5 mt-6">
+        <h3 className="font-semibold text-white mb-1">Gol Dağılımı — Dakika Bazlı</h3>
+        <p className="text-xs text-slate-400 mb-4">Seçili lig tahminlerindeki gol beklentisinin dakika dağılımı</p>
+        {goalTimeData.length === 0 ? (
+          <div className="text-center py-12 text-slate-500">Bu lig için tahmin verisi yok</div>
+        ) : (
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={goalTimeData} margin={{ left: -20 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+              <XAxis dataKey="slot" tick={{ fill: '#94a3b8', fontSize: 10 }} />
+              <YAxis tick={{ fill: '#94a3b8', fontSize: 11 }} />
+              <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px' }} labelStyle={{ color: '#f1f5f9' }} formatter={(v) => [`${v} gol`, 'Toplam']} />
+              <Bar dataKey="goals" fill="#f59e0b" radius={[4, 4, 0, 0]} name="Gol" />
+            </BarChart>
+          </ResponsiveContainer>
+        )}
+      </div>
+
+      {/* Tahmin Doğruluğu */}
+      {accuracy && (
+        <div className="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden mt-6">
+          <div className="bg-slate-900 px-5 py-3 border-b border-slate-700 flex items-center gap-4">
+            <h3 className="font-semibold text-white">Tahmin Doğruluğu</h3>
+            <span className="text-xs text-slate-400">Geçmiş maçlarda API tahminleri vs gerçek sonuçlar</span>
+            <span className={cn('ml-auto font-bold text-lg', accuracy.rate >= 60 ? 'text-emerald-400' : accuracy.rate >= 45 ? 'text-yellow-400' : 'text-red-400')}>
+              %{accuracy.rate}
+            </span>
+            <span className="text-xs text-slate-500">{accuracy.correct}/{accuracy.total} doğru</span>
+          </div>
+          <div className="divide-y divide-slate-700/50">
+            {accuracy.rows.map((r, i) => (
+              <div key={i} className="flex items-center justify-between px-5 py-2.5 text-sm">
+                <span className="text-slate-300 text-xs">{r.home} vs {r.away}</span>
+                <div className="flex items-center gap-4 text-xs">
+                  <span className="text-slate-400">Tahmin: <span className="text-slate-200">{r.predicted}</span></span>
+                  <span className="text-slate-400">Sonuç: <span className="text-slate-200">{r.actual}</span></span>
+                  <span className={r.ok ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'}>{r.ok ? '✓' : '✗'}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

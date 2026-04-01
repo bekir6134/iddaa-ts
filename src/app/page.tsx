@@ -5,6 +5,7 @@ import { useWeekFixtures, useAllOdds, useAllPredictions, useAllInjuries, useMeta
 import { MatchCard } from '@/components/dashboard/MatchCard';
 import { StatsBar } from '@/components/dashboard/StatsBar';
 import { LeagueFilter } from '@/components/dashboard/LeagueFilter';
+import { ValueBetAlert } from '@/components/dashboard/ValueBetAlert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Download, AlertTriangle, Search, X } from 'lucide-react';
@@ -100,6 +101,8 @@ export default function DashboardPage() {
           injuriesCount={injuriesCount}
         />
       )}
+
+      <ValueBetAlert fixtures={allFixtures} allOdds={allOdds} allPredictions={allPredictions} />
 
       <div className="relative mb-4">
         <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />

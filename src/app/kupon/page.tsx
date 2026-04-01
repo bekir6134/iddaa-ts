@@ -1,17 +1,19 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useAllOdds, useAllPredictions, useWeekFixtures, useAllInjuries } from '@/hooks/useData';
 import { generateCoupon } from '@/lib/coupon-engine';
+import { saveCoupon, getHistory, deleteFromHistory } from '@/lib/coupon-history';
+import type { SavedCoupon } from '@/lib/coupon-history';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Sparkles, X, Info, RefreshCw, Copy, Check } from 'lucide-react';
+import { Sparkles, X, Info, RefreshCw, Copy, Check, Bookmark, Trash2, History } from 'lucide-react';
 import type { AppCache } from '@/types/cache';
 import type { CouponFilters, CouponSelection, GeneratedCoupon, BetType } from '@/types/coupon';
 import { DEFAULT_FILTERS, BET_TYPE_LABELS, CONFIDENCE_LABELS, RISK_LABELS } from '@/types/coupon';
-import { formatTurkeyTime, formatOdd, LEAGUE_IDS, LEAGUE_NAMES, cn } from '@/lib/utils';
+import { formatTurkeyTime, formatTurkeyDateTime, formatOdd, LEAGUE_IDS, LEAGUE_NAMES, cn } from '@/lib/utils';
 import Image from 'next/image';
 
 const ALL_BET_TYPES: BetType[] = ['1X2', 'Over2.5', 'Over1.5', 'Under2.5', 'BTTS', 'DNB'];
@@ -21,6 +23,11 @@ export default function KuponPage() {
   const [coupon, setCoupon] = useState<GeneratedCoupon | null>(null);
   const [generating, setGenerating] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [history, setHistory] = useState<SavedCoupon[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
+
+  useEffect(() => { setHistory(getHistory()); }, []);
 
   const { data: weekFixtures } = useWeekFixtures();
   const { data: allOdds } = useAllOdds();
@@ -48,6 +55,7 @@ export default function KuponPage() {
       standings: { byLeague: {} },
       h2h: { byFixturePair: {} },
       teamStats: { byTeam: {} },
+      results: { byLeague: {}, byFixture: {} },
     };
 
     setTimeout(() => {
@@ -56,6 +64,18 @@ export default function KuponPage() {
       setGenerating(false);
     }, 300);
   }, [filters, isLoaded, weekFixtures, allOdds, allPredictions, allInjuries]);
+
+  const handleSave = () => {
+    if (!coupon) return;
+    const updated = saveCoupon(coupon);
+    setHistory(updated);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
+
+  const handleDelete = (id: string) => {
+    setHistory(deleteFromHistory(id));
+  };
 
   const handleCopy = () => {
     if (!coupon) return;
@@ -235,6 +255,10 @@ export default function KuponPage() {
                       {copied ? <Check size={14} /> : <Copy size={14} />}
                       {copied ? 'Kopyalandı' : 'Kopyala'}
                     </Button>
+                    <Button variant="outline" size="sm" onClick={handleSave} className="border-slate-600 text-slate-300 hover:bg-slate-700 gap-1.5">
+                      {saved ? <Check size={14} /> : <Bookmark size={14} />}
+                      {saved ? 'Kaydedildi' : 'Kaydet'}
+                    </Button>
                     <Button variant="outline" size="sm" onClick={handleGenerate} className="border-slate-600 text-slate-300 hover:bg-slate-700 gap-1.5">
                       <RefreshCw size={14} />
                       Yenile
@@ -256,6 +280,57 @@ export default function KuponPage() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Kupon Geçmişi */}
+      <div className="mt-8">
+        <button
+          onClick={() => setShowHistory((v) => !v)}
+          className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors mb-4"
+        >
+          <History size={16} />
+          <span className="font-semibold">Kaydedilen Kuponlar</span>
+          <span className="text-xs bg-slate-700 text-slate-300 px-2 py-0.5 rounded-full">{history.length}</span>
+          <span className="text-xs text-slate-600">{showHistory ? '▲' : '▼'}</span>
+        </button>
+
+        {showHistory && (
+          history.length === 0 ? (
+            <p className="text-slate-500 text-sm">Henüz kaydedilen kupon yok.</p>
+          ) : (
+            <div className="space-y-3">
+              {history.map((h) => (
+                <div key={h.id} className="bg-slate-800 border border-slate-700 rounded-xl p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-3">
+                      <span className="text-emerald-400 font-bold text-lg">{h.totalOdds.toFixed(2)}</span>
+                      <span className="text-slate-400 text-sm">{h.selections.length} seçim</span>
+                      <span className={cn('text-xs font-medium', {
+                        'text-emerald-400': h.overallRisk === 'low',
+                        'text-yellow-400': h.overallRisk === 'medium',
+                        'text-orange-400': h.overallRisk === 'high',
+                        'text-red-400': h.overallRisk === 'very-high',
+                      })}>{RISK_LABELS[h.overallRisk]}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-slate-500">{formatTurkeyDateTime(h.savedAt)}</span>
+                      <button onClick={() => handleDelete(h.id)} className="text-slate-600 hover:text-red-400 transition-colors">
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {h.selections.map((s, i) => (
+                      <span key={i} className="text-xs bg-slate-700 text-slate-300 rounded px-2 py-0.5">
+                        {s.homeTeam} vs {s.awayTeam} — {s.selection} @ {formatOdd(s.odds)}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
+        )}
       </div>
     </div>
   );

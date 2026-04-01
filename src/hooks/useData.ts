@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import type { Fixture, FixtureOdds, FixturePrediction, InjuryRecord, StandingEntry, TeamStatistics } from '@/types/api-football';
-import type { CacheMeta } from '@/types/cache';
+import type { CacheMeta, ResultsCache } from '@/types/cache';
 
 async function fetcher<T>(url: string): Promise<T> {
   const res = await fetch(url);
@@ -149,6 +149,13 @@ export function useAllTeamStats() {
   return useQuery<Record<number, TeamStatistics>>({
     queryKey: ['team-stats'],
     queryFn: () => fetcher('/api/data/team-stats'),
+  });
+}
+
+export function useResults() {
+  return useQuery<ResultsCache>({
+    queryKey: ['results'],
+    queryFn: () => fetcher('/api/data/results'),
   });
 }
 

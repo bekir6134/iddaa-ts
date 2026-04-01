@@ -204,6 +204,23 @@ export async function runDailyRefresh(): Promise<RefreshResult> {
   cache.teamStats = { byTeam: teamStatsById };
   await saveCache('teamStats', cache.teamStats);
 
+  // ── Phase 9: Recent results (last 10 finished fixtures per league) ───────────
+  const resultsByLeague: AppCache['results']['byLeague'] = {};
+  const resultsByFixture: AppCache['results']['byFixture'] = {};
+
+  for (const leagueId of ALL_LEAGUE_IDS) {
+    const res = await safe(`results-${leagueId}`, () => api.getFixturesLast(leagueId, 10));
+    if (res?.response?.length) {
+      resultsByLeague[leagueId] = res.response;
+      for (const f of res.response) {
+        resultsByFixture[f.fixture.id] = f;
+      }
+    }
+  }
+
+  cache.results = { byLeague: resultsByLeague, byFixture: resultsByFixture };
+  await saveCache('results', cache.results);
+
   // ── Update meta ──────────────────────────────────────────────────────────────
   const fixtureCount = allFixtures.length;
   const now = new Date();

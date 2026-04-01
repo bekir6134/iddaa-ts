@@ -54,6 +54,11 @@ export interface TeamStatsCache {
   byTeam: Record<number, TeamStatistics>;
 }
 
+export interface ResultsCache {
+  byLeague: Record<number, Fixture[]>;
+  byFixture: Record<number, Fixture>;
+}
+
 // ─── Root Cache ───────────────────────────────────────────────────────────────
 
 export interface AppCache {
@@ -65,6 +70,7 @@ export interface AppCache {
   standings: StandingsCache;
   h2h: H2HCache;
   teamStats: TeamStatsCache;
+  results: ResultsCache;
 }
 
 // ─── Storage Adapter ──────────────────────────────────────────────────────────
