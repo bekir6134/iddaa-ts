@@ -56,6 +56,7 @@ export default function KuponPage() {
       h2h: { byFixturePair: {} },
       teamStats: { byTeam: {} },
       results: { byLeague: {}, byFixture: {} },
+      poisson: { byFixture: {} },
     };
 
     setTimeout(() => {
