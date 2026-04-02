@@ -91,55 +91,99 @@ export default function MatchDetailPage({ params }: { params: Promise<{ fixtureI
 
         {/* Prediction Tab */}
         <TabsContent value="prediction">
-          {loadingPred ? <Skeleton className="h-48 w-full bg-slate-800" /> : !prediction ? (
+          {loadingPred ? (
+            <Skeleton className="h-48 w-full bg-slate-800" />
+          ) : (!prediction && (!poissonResult || poissonResult.dataQuality === 'none')) ? (
             <EmptyInfo text="Bu maç için tahmin verisi mevcut değil" />
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* Sol kart: Poisson öncelikli olasılıklar */}
               <div className="bg-slate-800 border border-slate-700 rounded-xl p-5">
-                <h3 className="font-semibold text-white mb-1">Maç Tahmini</h3>
-                <p className="text-xs text-slate-500 mb-4">Son form, H2H geçmişi, ev/deplasman istatistikleri ve takım gücüne göre hesaplanır.</p>
-                <div className="space-y-3">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-400">Kazanma Olasılıkları</span>
-                  </div>
-                  <div className="space-y-2">
-                    <PredBar label={home.name} value={parseFloat(pred!.percent.home)} color="bg-emerald-500" />
-                    <PredBar label="Beraberlik" value={parseFloat(pred!.percent.draw)} color="bg-slate-500" />
-                    <PredBar label={away.name} value={parseFloat(pred!.percent.away)} color="bg-blue-500" />
-                  </div>
-                  <div className="pt-3 border-t border-slate-700">
-                    <p className="text-slate-400 text-xs mb-1">Tahmin Özeti</p>
-                    <p className="text-emerald-400 font-medium text-sm">
-                      {pred!.winner?.name
-                        ? `${pred!.winner.name} kazanır`
-                        : 'Beraberlik bekleniyor'}
-                    </p>
-                  </div>
-                  {pred!.under_over && (
+                {poissonResult && poissonResult.dataQuality !== 'none' ? (
+                  <div className="space-y-3">
                     <div>
-                      <p className="text-slate-400 text-xs mb-1">Alt/Üst Tahmini</p>
-                      <Badge className={Number(pred!.under_over) < 0 ? 'bg-slate-600' : 'bg-blue-600'}>
-                        {Number(pred!.under_over) < 0
-                          ? `${Math.abs(Number(pred!.under_over))} Alt`
-                          : `${pred!.under_over} Üst`}
-                      </Badge>
+                      <h3 className="font-semibold text-white mb-1">
+                        Maç Tahmini <span className="text-xs text-emerald-500 font-normal">(Poisson Modeli)</span>
+                      </h3>
+                      <p className="text-xs text-slate-500">
+                        λ {home.name}: {poissonResult.homeLambda} &nbsp;/&nbsp; λ {away.name}: {poissonResult.awayLambda}
+                      </p>
                     </div>
-                  )}
-                  {pred!.goals &&
-                    pred!.goals.home !== null &&
-                    pred!.goals.away !== null &&
-                    Number(pred!.goals.home) >= 0 &&
-                    Number(pred!.goals.away) >= 0 && (
+                    <div className="space-y-2">
+                      <PredBar label={home.name} value={Math.round(poissonResult.probHome * 100)} color="bg-emerald-500" />
+                      <PredBar label="Beraberlik" value={Math.round(poissonResult.probDraw * 100)} color="bg-slate-500" />
+                      <PredBar label={away.name} value={Math.round(poissonResult.probAway * 100)} color="bg-blue-500" />
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 text-center text-xs border-t border-slate-700 pt-3">
+                      <div className="bg-slate-700 rounded-lg p-2">
+                        <div className="text-yellow-400 font-bold">{Math.round(poissonResult.probOver25 * 100)}%</div>
+                        <div className="text-slate-500">2.5 Üst</div>
+                      </div>
+                      <div className="bg-slate-700 rounded-lg p-2">
+                        <div className="text-yellow-400 font-bold">{Math.round(poissonResult.probOver15 * 100)}%</div>
+                        <div className="text-slate-500">1.5 Üst</div>
+                      </div>
+                      <div className="bg-slate-700 rounded-lg p-2">
+                        <div className="text-yellow-400 font-bold">{Math.round(poissonResult.probBTTS * 100)}%</div>
+                        <div className="text-slate-500">KG Var</div>
+                      </div>
+                    </div>
+                    {(poissonResult.valueHome || poissonResult.valueDraw || poissonResult.valueAway) && (
+                      <div className="flex gap-1.5 flex-wrap pt-1">
+                        {poissonResult.valueHome && <Badge className="bg-emerald-700 text-white text-[10px]">Değer: 1</Badge>}
+                        {poissonResult.valueDraw && <Badge className="bg-slate-600 text-white text-[10px]">Değer: X</Badge>}
+                        {poissonResult.valueAway && <Badge className="bg-blue-700 text-white text-[10px]">Değer: 2</Badge>}
+                      </div>
+                    )}
+                    {pred && (
+                      <div className="pt-3 border-t border-slate-700">
+                        <p className="text-xs text-slate-500 mb-1">API Tahmini (referans)</p>
+                        <div className="flex gap-3 text-xs text-slate-400">
+                          <span>1: {pred.percent.home}</span>
+                          <span>X: {pred.percent.draw}</span>
+                          <span>2: {pred.percent.away}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : pred ? (
+                  <div className="space-y-3">
                     <div>
-                      <p className="text-slate-400 text-xs mb-1">Tahmini Skor</p>
-                      <span className="text-white font-bold">{pred!.goals.home} - {pred!.goals.away}</span>
+                      <h3 className="font-semibold text-white mb-1">Maç Tahmini</h3>
+                      <p className="text-xs text-slate-500">Son form, H2H geçmişi ve ev/deplasman istatistiklerine göre</p>
                     </div>
-                  )}
-                </div>
+                    <div className="space-y-2">
+                      <PredBar label={home.name} value={parseFloat(pred.percent.home)} color="bg-emerald-500" />
+                      <PredBar label="Beraberlik" value={parseFloat(pred.percent.draw)} color="bg-slate-500" />
+                      <PredBar label={away.name} value={parseFloat(pred.percent.away)} color="bg-blue-500" />
+                    </div>
+                    <div className="pt-3 border-t border-slate-700">
+                      <p className="text-slate-400 text-xs mb-1">Tahmin Özeti</p>
+                      <p className="text-emerald-400 font-medium text-sm">
+                        {pred.winner?.name ? `${pred.winner.name} kazanır` : 'Beraberlik bekleniyor'}
+                      </p>
+                    </div>
+                    {pred.under_over && (
+                      <div>
+                        <p className="text-slate-400 text-xs mb-1">Alt/Üst Tahmini</p>
+                        <Badge className={Number(pred.under_over) < 0 ? 'bg-slate-600' : 'bg-blue-600'}>
+                          {Number(pred.under_over) < 0 ? `${Math.abs(Number(pred.under_over))} Alt` : `${pred.under_over} Üst`}
+                        </Badge>
+                      </div>
+                    )}
+                    {pred.goals && pred.goals.home !== null && pred.goals.away !== null &&
+                      Number(pred.goals.home) >= 0 && Number(pred.goals.away) >= 0 && (
+                      <div>
+                        <p className="text-slate-400 text-xs mb-1">Tahmini Skor</p>
+                        <span className="text-white font-bold">{pred.goals.home} - {pred.goals.away}</span>
+                      </div>
+                    )}
+                  </div>
+                ) : null}
               </div>
 
-              {/* Comparison */}
-              {prediction.comparison && (
+              {/* Sağ kart: Karşılaştırma */}
+              {prediction?.comparison && (
                 <div className="bg-slate-800 border border-slate-700 rounded-xl p-5">
                   <h3 className="font-semibold text-white mb-4">Karşılaştırma</h3>
                   <div className="space-y-3">

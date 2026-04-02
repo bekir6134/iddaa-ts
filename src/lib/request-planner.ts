@@ -237,7 +237,9 @@ export async function runDailyRefresh(): Promise<RefreshResult> {
       fixture.fixture.id,
       teamStatsById[fixture.teams.home.id],
       teamStatsById[fixture.teams.away.id],
-      oddsByFixture[fixture.fixture.id]
+      oddsByFixture[fixture.fixture.id],
+      injuriesByTeam[fixture.teams.home.id] ?? [],
+      injuriesByTeam[fixture.teams.away.id] ?? []
     );
   }
   cache.poisson = { byFixture: poissonByFixture };

@@ -1,4 +1,4 @@
-import type { TeamStatistics, FixtureOdds } from '@/types/api-football';
+import type { TeamStatistics, FixtureOdds, InjuryRecord } from '@/types/api-football';
 import type { PoissonResult } from '@/types/cache';
 
 const LEAGUE_AVG_GOALS = 1.2; // fallback when team stats missing
@@ -94,13 +94,30 @@ function extractOdd(oddsEntry: FixtureOdds | undefined, value: string): number |
   return isNaN(n) ? null : n;
 }
 
+// ─── Injury Adjustment ────────────────────────────────────────────────────────
+
+// Her "Missing Fixture" sakatlık lambda'yı %5, "Questionable" %2 düşürür (max %20)
+export function applyInjuryAdjustment(lambda: number, injuries: InjuryRecord[]): number {
+  if (injuries.length === 0) return lambda;
+  const missing = injuries.filter(
+    (i) => (i.type === 'Missing Fixture') || (i.player?.type === 'Missing Fixture')
+  ).length;
+  const questionable = injuries.filter(
+    (i) => (i.type === 'Questionable') || (i.player?.type === 'Questionable')
+  ).length;
+  const reduction = Math.min(0.20, missing * 0.05 + questionable * 0.02);
+  return Math.max(0.1, lambda * (1 - reduction));
+}
+
 // ─── Top-Level Builder ────────────────────────────────────────────────────────
 
 export function buildPoissonResult(
   fixtureId: number,
   homeStats: TeamStatistics | undefined,
   awayStats: TeamStatistics | undefined,
-  oddsEntry: FixtureOdds | undefined
+  oddsEntry: FixtureOdds | undefined,
+  homeInjuries: InjuryRecord[] = [],
+  awayInjuries: InjuryRecord[] = []
 ): PoissonResult {
   if (!homeStats && !awayStats) {
     return {
@@ -116,10 +133,13 @@ export function buildPoissonResult(
     goals: { for: { average: { home: String(LEAGUE_AVG_GOALS), away: String(LEAGUE_AVG_GOALS), total: String(LEAGUE_AVG_GOALS) } }, against: { average: { home: String(LEAGUE_AVG_GOALS), away: String(LEAGUE_AVG_GOALS), total: String(LEAGUE_AVG_GOALS) } } },
   } as TeamStatistics;
 
-  const { homeLambda, awayLambda, quality } = calcLambdas(
+  const { homeLambda: rawHome, awayLambda: rawAway, quality } = calcLambdas(
     fakeStats(homeStats),
     fakeStats(awayStats)
   );
+
+  const homeLambda = applyInjuryAdjustment(rawHome, homeInjuries);
+  const awayLambda = applyInjuryAdjustment(rawAway, awayInjuries);
 
   const { probHome, probDraw, probAway, probOver25, probOver15, probBTTS } =
     calcMatchProbabilities(homeLambda, awayLambda);
