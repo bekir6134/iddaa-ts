@@ -104,14 +104,22 @@ export async function runDailyRefresh(): Promise<RefreshResult> {
   await saveCache('fixtures', cache.fixtures);
 
   // ── Phase 4: Injuries (8 leagues) ───────────────────────────────────────────
+  // Sadece önümüzdeki 14 gün içindeki maçlara bağlı sakatlıkları tut
   const injuriesByLeague: AppCache['injuries']['byLeague'] = {};
   const injuriesByTeam: AppCache['injuries']['byTeam'] = {};
+  const todayTs = new Date(today).getTime();
+  const cutoffTs = todayTs + 14 * 24 * 60 * 60 * 1000;
 
   for (const leagueId of ALL_LEAGUE_IDS) {
     const res = await safe(`injuries-${leagueId}`, () => api.getInjuries(leagueId));
     if (res?.response?.length) {
-      injuriesByLeague[leagueId] = res.response;
-      for (const injury of res.response) {
+      const upcoming = res.response.filter((inj) => {
+        const ts = new Date(inj.fixture.date).getTime();
+        return ts >= todayTs && ts <= cutoffTs;
+      });
+      if (upcoming.length === 0) continue;
+      injuriesByLeague[leagueId] = upcoming;
+      for (const injury of upcoming) {
         const tid = injury.team.id;
         if (!injuriesByTeam[tid]) injuriesByTeam[tid] = [];
         injuriesByTeam[tid].push(injury);
