@@ -37,7 +37,7 @@ export function StatsBar({ meta, todayCount, predictionsCount, injuriesCount }: 
           </div>
           <div className="flex items-center gap-2 text-sm">
             <TrendingUp size={16} className="text-blue-400" />
-            <span className="text-slate-400">Tahminler:</span>
+            <span className="text-slate-400">Toplam Maç:</span>
             <span className="font-bold text-white">{predictionsCount}</span>
           </div>
           <div className="flex items-center gap-2 text-sm">

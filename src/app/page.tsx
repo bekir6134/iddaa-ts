@@ -97,7 +97,7 @@ export default function DashboardPage() {
         <StatsBar
           meta={meta}
           todayCount={todayCount}
-          predictionsCount={Object.keys(allPredictions ?? {}).length}
+          predictionsCount={meta.fixtureCount ?? 0}
           injuriesCount={injuriesCount}
         />
       )}
