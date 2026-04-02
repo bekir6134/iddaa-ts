@@ -78,6 +78,7 @@ function emptyCache(): AppCache {
     h2h: { byFixturePair: {} },
     teamStats: { byTeam: {} },
     results: { byLeague: {}, byFixture: {} },
+    poisson: { byFixture: {} },
   };
 }
 
@@ -86,7 +87,7 @@ function emptyCache(): AppCache {
 export async function loadCache(): Promise<AppCache> {
   const adapter = getAdapter();
   const keys: (keyof Omit<AppCache, 'meta'>)[] = [
-    'fixtures', 'odds', 'predictions', 'injuries', 'standings', 'h2h', 'teamStats', 'results',
+    'fixtures', 'odds', 'predictions', 'injuries', 'standings', 'h2h', 'teamStats', 'results', 'poisson',
   ];
 
   const cache = emptyCache();

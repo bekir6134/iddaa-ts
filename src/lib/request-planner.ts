@@ -1,6 +1,7 @@
 import * as api from './api-football';
 // Not: Free plan `next` parametresini desteklemiyor. getFixturesLast kullanılıyor.
 import { saveCache, getCache } from './data-cache';
+import { buildPoissonResult } from './poisson';
 import type { AppCache, CacheMeta } from '@/types/cache';
 import type { Fixture } from '@/types/api-football';
 import { ALL_LEAGUE_IDS, LEAGUE_IDS } from './utils';
@@ -220,6 +221,19 @@ export async function runDailyRefresh(): Promise<RefreshResult> {
 
   cache.results = { byLeague: resultsByLeague, byFixture: resultsByFixture };
   await saveCache('results', cache.results);
+
+  // ── Phase 10: Poisson (sıfır API isteği — teamStats + odds'tan hesaplanır) ──
+  const poissonByFixture: AppCache['poisson']['byFixture'] = {};
+  for (const fixture of allFixtures) {
+    poissonByFixture[fixture.fixture.id] = buildPoissonResult(
+      fixture.fixture.id,
+      teamStatsById[fixture.teams.home.id],
+      teamStatsById[fixture.teams.away.id],
+      oddsByFixture[fixture.fixture.id]
+    );
+  }
+  cache.poisson = { byFixture: poissonByFixture };
+  await saveCache('poisson', cache.poisson);
 
   // ── Update meta ──────────────────────────────────────────────────────────────
   const fixtureCount = allFixtures.length;

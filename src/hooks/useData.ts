@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import type { Fixture, FixtureOdds, FixturePrediction, InjuryRecord, StandingEntry, TeamStatistics } from '@/types/api-football';
-import type { CacheMeta, ResultsCache } from '@/types/cache';
+import type { CacheMeta, ResultsCache, PoissonResult } from '@/types/cache';
 
 async function fetcher<T>(url: string): Promise<T> {
   const res = await fetch(url);
@@ -149,6 +149,21 @@ export function useAllTeamStats() {
   return useQuery<Record<number, TeamStatistics>>({
     queryKey: ['team-stats'],
     queryFn: () => fetcher('/api/data/team-stats'),
+  });
+}
+
+export function useAllPoisson() {
+  return useQuery<Record<number, PoissonResult>>({
+    queryKey: ['poisson'],
+    queryFn: () => fetcher('/api/data/poisson'),
+  });
+}
+
+export function useFixturePoisson(fixtureId: number | null) {
+  return useQuery<PoissonResult | null>({
+    queryKey: ['poisson', fixtureId],
+    queryFn: () => fetcher(`/api/data/poisson?fixture=${fixtureId}`),
+    enabled: fixtureId !== null,
   });
 }
 

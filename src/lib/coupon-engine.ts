@@ -249,7 +249,17 @@ function scoreBet(
   const winnerId = winner === 'home' ? fixture.teams.home.id : fixture.teams.away.id;
   const injuryCount = (cache.injuries.byTeam[winnerId] ?? []).length;
 
-  const predScore = pred ? calcPredictionScore(homePct, drawPct, awayPct, betType, selection, pred.predictions.advice) : 0;
+  // Poisson varsa API tahmininin önüne geç
+  const poissonResult = cache.poisson?.byFixture?.[fixture.fixture.id];
+  if (poissonResult && poissonResult.dataQuality !== 'none') {
+    homePct = Math.round(poissonResult.probHome * 100);
+    drawPct = Math.round(poissonResult.probDraw * 100);
+    awayPct = Math.round(poissonResult.probAway * 100);
+  }
+
+  const predScore = (pred || poissonResult?.dataQuality !== 'none')
+    ? calcPredictionScore(homePct, drawPct, awayPct, betType, selection, pred?.predictions?.advice ?? '')
+    : 0;
   const formScore = calcFormScore(homeForm, awayForm, betType, selection);
   const h2hScore = calcH2HScore(h2hFixtures, fixture.teams.home.id, betType, selection);
   const homeAdvScore = calcHomeAdvantageScore(homeWinPct, betType, selection);

@@ -12,6 +12,7 @@ type DataType =
   | 'h2h'
   | 'team-stats'
   | 'results'
+  | 'poisson'
   | 'meta';
 
 export async function GET(
@@ -76,6 +77,11 @@ export async function GET(
       case 'team-stats': {
         if (teamId) return NextResponse.json(cache.teamStats.byTeam[teamId] ?? null, { headers });
         return NextResponse.json(cache.teamStats.byTeam, { headers });
+      }
+
+      case 'poisson': {
+        if (fixtureId) return NextResponse.json(cache.poisson?.byFixture?.[fixtureId] ?? null, { headers });
+        return NextResponse.json(cache.poisson?.byFixture ?? {}, { headers });
       }
 
       case 'results': {

@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
-import { useWeekFixtures, useAllPredictions, useAllStandings, useAllOdds, useAllInjuries, useAllH2H, useAllTeamStats, useResults } from '@/hooks/useData';
+import { useWeekFixtures, useAllPredictions, useAllStandings, useAllOdds, useAllInjuries, useAllH2H, useAllTeamStats, useResults, useAllPoisson } from '@/hooks/useData';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { LEAGUE_IDS, LEAGUE_NAMES, cn } from '@/lib/utils';
@@ -36,6 +36,7 @@ export default function IstatistiklerPage() {
   const { data: allH2H } = useAllH2H();
   const { data: allTeamStats } = useAllTeamStats();
   const { data: results } = useResults();
+  const { data: allPoisson } = useAllPoisson();
 
   const allFixtures = useMemo(() => Object.values(weekFixtures ?? {}).flat(), [weekFixtures]);
 
@@ -93,10 +94,11 @@ export default function IstatistiklerPage() {
       teamStats: { byTeam: allTeamStats ?? {} },
       standings: { byLeague: {} },
       results: { byLeague: {}, byFixture: {} },
+      poisson: { byFixture: allPoisson ?? {} },
       meta: undefined as never,
     };
     return rankSelections(cache, ['1X2', 'Over2.5', 'Over1.5', 'BTTS']);
-  }, [weekFixtures, allOdds, allPredictions, allInjuries, allH2H, allTeamStats]);
+  }, [weekFixtures, allOdds, allPredictions, allInjuries, allH2H, allTeamStats, allPoisson]);
 
   const sortedPicks = useMemo(() => {
     const picks = [...topPicks];
@@ -307,6 +309,62 @@ export default function IstatistiklerPage() {
           </ResponsiveContainer>
         )}
       </div>
+
+      {/* Değer Bahisler (Poisson) */}
+      {(() => {
+        const valueBets = allFixtures
+          .map((f) => ({ f, p: allPoisson?.[f.fixture.id] }))
+          .filter(({ p }) => p && p.dataQuality !== 'none' && (p.valueHome || p.valueDraw || p.valueAway))
+          .sort((a, b) => (b.p?.confidence ?? 0) - (a.p?.confidence ?? 0))
+          .slice(0, 20);
+        if (valueBets.length === 0) return null;
+        return (
+          <div className="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden mb-6 mt-6">
+            <div className="bg-slate-900 px-5 py-3 border-b border-slate-700 flex items-center gap-3">
+              <h3 className="font-semibold text-white">Değer Bahisler (Poisson)</h3>
+              <span className="text-xs text-slate-400">model_olasılık × oran &gt; 1</span>
+              <span className="ml-auto text-xs text-emerald-400">{valueBets.length} maç</span>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm min-w-[500px]">
+                <thead>
+                  <tr className="text-xs text-slate-400 border-b border-slate-700">
+                    <th className="text-left p-3">Maç</th>
+                    <th className="text-center p-3">λ Ev / Dep</th>
+                    <th className="text-center p-3">Poisson Olasılık (1/X/2)</th>
+                    <th className="text-center p-3">Değer</th>
+                    <th className="text-center p-3">Güven</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {valueBets.map(({ f, p }, i) => (
+                    <tr key={f.fixture.id} className={cn('border-b border-slate-700/50', i % 2 === 0 ? '' : 'bg-slate-800/50')}>
+                      <td className="p-3">
+                        <Link href={`/mac-analizi/${f.fixture.id}`} className="hover:text-emerald-400 transition-colors">
+                          <p className="text-xs text-slate-500">{LEAGUE_NAMES[f.league.id] ?? f.league.name}</p>
+                          <p className="text-slate-200 text-xs font-medium">{f.teams.home.name} <span className="text-slate-500">vs</span> {f.teams.away.name}</p>
+                        </Link>
+                      </td>
+                      <td className="p-3 text-center text-xs text-slate-400">{p!.homeLambda} / {p!.awayLambda}</td>
+                      <td className="p-3 text-center text-xs text-slate-300">
+                        {Math.round(p!.probHome * 100)}% / {Math.round(p!.probDraw * 100)}% / {Math.round(p!.probAway * 100)}%
+                      </td>
+                      <td className="p-3 text-center">
+                        <div className="flex justify-center gap-1 flex-wrap">
+                          {p!.valueHome && <Badge className="bg-emerald-700 text-white text-[10px]">1</Badge>}
+                          {p!.valueDraw && <Badge className="bg-slate-600 text-white text-[10px]">X</Badge>}
+                          {p!.valueAway && <Badge className="bg-blue-700 text-white text-[10px]">2</Badge>}
+                        </div>
+                      </td>
+                      <td className="p-3 text-center text-xs font-bold text-emerald-400">{p!.confidence}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Gol Dağılımı — Zaman Dilimi */}
       <div className="bg-slate-800 border border-slate-700 rounded-xl p-5 mt-6">

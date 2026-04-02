@@ -7,7 +7,7 @@ import { ArrowLeft } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { useWeekFixtures, useFixtureOdds, useFixturePrediction, useH2H, useTeamInjuries } from '@/hooks/useData';
+import { useWeekFixtures, useFixtureOdds, useFixturePrediction, useH2H, useTeamInjuries, useFixturePoisson } from '@/hooks/useData';
 import { formatTurkeyDateTime, formatOdd, formToColor, formatScore, cn, LEAGUE_NAMES } from '@/lib/utils';
 import type { Fixture } from '@/types/api-football';
 
@@ -29,6 +29,7 @@ export default function MatchDetailPage({ params }: { params: Promise<{ fixtureI
   const { data: h2h, isLoading: loadingH2H } = useH2H(homeId, awayId);
   const { data: homeInjuries } = useTeamInjuries(homeId);
   const { data: awayInjuries } = useTeamInjuries(awayId);
+  const { data: poissonResult } = useFixturePoisson(fixtureId);
 
   if (!fixture) {
     return (
@@ -85,6 +86,7 @@ export default function MatchDetailPage({ params }: { params: Promise<{ fixtureI
           <TabsTrigger value="h2h" className="data-[state=active]:bg-emerald-600 data-[state=active]:text-white">H2H</TabsTrigger>
           <TabsTrigger value="form" className="data-[state=active]:bg-emerald-600 data-[state=active]:text-white">Form</TabsTrigger>
           <TabsTrigger value="injuries" className="data-[state=active]:bg-emerald-600 data-[state=active]:text-white">Sakatlıklar</TabsTrigger>
+          <TabsTrigger value="poisson" className="data-[state=active]:bg-emerald-600 data-[state=active]:text-white">Poisson</TabsTrigger>
         </TabsList>
 
         {/* Prediction Tab */}
@@ -249,6 +251,72 @@ export default function MatchDetailPage({ params }: { params: Promise<{ fixtureI
             <InjuryList teamName={home.name} teamLogo={home.logo} injuries={homeInjuries ?? []} />
             <InjuryList teamName={away.name} teamLogo={away.logo} injuries={awayInjuries ?? []} />
           </div>
+        </TabsContent>
+
+        {/* Poisson Tab */}
+        <TabsContent value="poisson">
+          {!poissonResult || poissonResult.dataQuality === 'none' ? (
+            <EmptyInfo text="Poisson hesaplanamadı — takım istatistikleri henüz mevcut değil (bir sonraki cron'da yüklenecek)" />
+          ) : (
+            <div className="space-y-4">
+              {poissonResult.dataQuality === 'partial' && (
+                <div className="bg-yellow-900/20 border border-yellow-700/40 rounded-lg px-4 py-2 text-xs text-yellow-400">
+                  Kısmi veri — bir takımın istatistiği eksik, lig ortalaması kullanıldı
+                </div>
+              )}
+
+              {/* Lambdas + probabilities */}
+              <div className="bg-slate-800 border border-slate-700 rounded-xl p-5">
+                <h3 className="font-semibold text-white mb-1">Poisson Modeli</h3>
+                <p className="text-xs text-slate-500 mb-4">Sezonluk gol ortalamalarına göre hesaplanan olasılıklar</p>
+
+                <div className="flex gap-6 mb-5 text-center">
+                  <div>
+                    <div className="text-2xl font-bold text-emerald-400">{poissonResult.homeLambda}</div>
+                    <div className="text-xs text-slate-500">λ {home.name}</div>
+                  </div>
+                  <div className="text-slate-600 self-center text-xl">vs</div>
+                  <div>
+                    <div className="text-2xl font-bold text-blue-400">{poissonResult.awayLambda}</div>
+                    <div className="text-xs text-slate-500">λ {away.name}</div>
+                  </div>
+                </div>
+
+                <div className="space-y-2 mb-4">
+                  <PredBar label={home.name} value={Math.round(poissonResult.probHome * 100)} color="bg-emerald-500" />
+                  <PredBar label="Beraberlik" value={Math.round(poissonResult.probDraw * 100)} color="bg-slate-500" />
+                  <PredBar label={away.name} value={Math.round(poissonResult.probAway * 100)} color="bg-blue-500" />
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 text-center text-xs border-t border-slate-700 pt-4">
+                  <div className="bg-slate-700 rounded-lg p-2">
+                    <div className="text-yellow-400 font-bold">{Math.round(poissonResult.probOver25 * 100)}%</div>
+                    <div className="text-slate-500">2.5 Üst</div>
+                  </div>
+                  <div className="bg-slate-700 rounded-lg p-2">
+                    <div className="text-yellow-400 font-bold">{Math.round(poissonResult.probOver15 * 100)}%</div>
+                    <div className="text-slate-500">1.5 Üst</div>
+                  </div>
+                  <div className="bg-slate-700 rounded-lg p-2">
+                    <div className="text-yellow-400 font-bold">{Math.round(poissonResult.probBTTS * 100)}%</div>
+                    <div className="text-slate-500">KG Var</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Value bets */}
+              {(poissonResult.valueHome || poissonResult.valueDraw || poissonResult.valueAway) && (
+                <div className="bg-emerald-900/20 border border-emerald-700/40 rounded-xl p-4">
+                  <p className="text-emerald-400 font-semibold text-sm mb-2">Değer Bahis Fırsatı</p>
+                  <div className="flex gap-2 flex-wrap">
+                    {poissonResult.valueHome && <Badge className="bg-emerald-600 text-white">1 — {home.name} ({Math.round(poissonResult.probHome * 100)}%)</Badge>}
+                    {poissonResult.valueDraw && <Badge className="bg-slate-600 text-white">X — Beraberlik ({Math.round(poissonResult.probDraw * 100)}%)</Badge>}
+                    {poissonResult.valueAway && <Badge className="bg-blue-600 text-white">2 — {away.name} ({Math.round(poissonResult.probAway * 100)}%)</Badge>}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>

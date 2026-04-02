@@ -59,6 +59,27 @@ export interface ResultsCache {
   byFixture: Record<number, Fixture>;
 }
 
+export interface PoissonResult {
+  fixtureId: number;
+  homeLambda: number;
+  awayLambda: number;
+  probHome: number;
+  probDraw: number;
+  probAway: number;
+  probOver25: number;
+  probOver15: number;
+  probBTTS: number;
+  valueHome: boolean;
+  valueDraw: boolean;
+  valueAway: boolean;
+  confidence: number; // 0-100
+  dataQuality: 'full' | 'partial' | 'none';
+}
+
+export interface PoissonCache {
+  byFixture: Record<number, PoissonResult>;
+}
+
 // ─── Root Cache ───────────────────────────────────────────────────────────────
 
 export interface AppCache {
@@ -71,6 +92,7 @@ export interface AppCache {
   h2h: H2HCache;
   teamStats: TeamStatsCache;
   results: ResultsCache;
+  poisson: PoissonCache;
 }
 
 // ─── Storage Adapter ──────────────────────────────────────────────────────────
