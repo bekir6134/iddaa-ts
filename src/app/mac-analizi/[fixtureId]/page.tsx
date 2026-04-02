@@ -7,6 +7,7 @@ import { ArrowLeft } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useWeekFixtures, useFixtureOdds, useFixturePrediction, useH2H, useTeamInjuries, useFixturePoisson } from '@/hooks/useData';
 import { formatTurkeyDateTime, formatOdd, formToColor, formatScore, cn, LEAGUE_NAMES } from '@/lib/utils';
 import type { Fixture } from '@/types/api-football';
@@ -400,32 +401,77 @@ function PredBar({ label, value, color }: { label: string; value: number; color:
 
 function FormCard({ team, teamData }: { team: Fixture['teams']['home']; teamData: import('@/types/api-football').PredictionTeamForm }) {
   const form = teamData.last_5?.form ?? '';
+  // Sadece W/D/L karakterlerini al
+  const validForm = form.split('').filter((c) => ['W', 'D', 'L'].includes(c));
+  // Son 5 maç puanı: W=3, D=1, L=0
+  const points = validForm.reduce((acc, c) => acc + (c === 'W' ? 3 : c === 'D' ? 1 : 0), 0);
+
+  const formLabel: Record<string, string> = { W: 'G', D: 'B', L: 'M' };
+
   return (
     <div className="bg-slate-800 border border-slate-700 rounded-xl p-4">
       <div className="flex items-center gap-2 mb-3">
         {team.logo && <Image src={team.logo} alt={team.name} width={24} height={24} />}
         <span className="font-semibold text-white">{team.name}</span>
       </div>
-      <div className="flex gap-1 mb-3">
-        {form.split('').map((c, i) => (
-          <span key={i} className={cn('w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white', formToColor(c))}>{c}</span>
-        ))}
+
+      {/* Form daireleri */}
+      <div className="mb-1">
+        <p className="text-[10px] text-slate-500 mb-1.5">Son {validForm.length} maç (soldan eskiye)</p>
+        {validForm.length > 0 ? (
+          <div className="flex gap-1">
+            {validForm.map((c, i) => (
+              <div key={i} className="flex flex-col items-center gap-0.5">
+                <span className={cn('w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white', formToColor(c))}>
+                  {formLabel[c] ?? c}
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-slate-600 text-xs">Form verisi yok</p>
+        )}
+        <div className="flex gap-3 mt-1.5 text-[10px] text-slate-600">
+          <span><span className="inline-block w-2 h-2 rounded-full bg-green-500 mr-1" />G = Galibiyet</span>
+          <span><span className="inline-block w-2 h-2 rounded-full bg-yellow-500 mr-1" />B = Beraberlik</span>
+          <span><span className="inline-block w-2 h-2 rounded-full bg-red-500 mr-1" />M = Mağlubiyet</span>
+        </div>
       </div>
-      <div className="grid grid-cols-3 gap-2 text-center text-xs">
-        <StatBox label="Ort Gol (Ev)" value={teamData.last_5?.goals?.for?.average ?? '-'} />
-        <StatBox label="Ort Yenilen" value={teamData.last_5?.goals?.against?.average ?? '-'} />
-        <StatBox label="Son 5 Puan" value={String(teamData.last_5?.goals?.for?.total ?? '-')} />
+
+      <div className="grid grid-cols-3 gap-2 text-center text-xs mt-3">
+        <StatBox
+          label="Ort. Attığı Gol"
+          value={teamData.last_5?.goals?.for?.average ?? '-'}
+          tooltip="Son 5 maçta maç başına attığı ortalama gol"
+        />
+        <StatBox
+          label="Ort. Yediği Gol"
+          value={teamData.last_5?.goals?.against?.average ?? '-'}
+          tooltip="Son 5 maçta maç başına yediği ortalama gol"
+        />
+        <StatBox
+          label={`Son ${validForm.length} Maç Puanı`}
+          value={validForm.length > 0 ? String(points) : '-'}
+          tooltip={`G=3, B=1, M=0 puan. Maksimum ${validForm.length * 3} puan.`}
+        />
       </div>
     </div>
   );
 }
 
-function StatBox({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="bg-slate-700 rounded-lg p-2">
+function StatBox({ label, value, tooltip }: { label: string; value: string; tooltip?: string }) {
+  const box = (
+    <div className="bg-slate-700 rounded-lg p-2 cursor-default">
       <div className="text-emerald-400 font-bold text-sm">{value}</div>
       <div className="text-slate-500 text-[10px]">{label}</div>
     </div>
+  );
+  if (!tooltip) return box;
+  return (
+    <Tooltip>
+      <TooltipTrigger>{box}</TooltipTrigger>
+      <TooltipContent className="bg-slate-900 border-slate-700 text-xs max-w-[180px]">{tooltip}</TooltipContent>
+    </Tooltip>
   );
 }
 
