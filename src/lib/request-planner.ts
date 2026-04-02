@@ -205,8 +205,8 @@ export async function runDailyRefresh(): Promise<RefreshResult> {
     const leagueId = teamLeagueMap.get(teamId);
     if (!leagueId) continue;
     const res = await safe(`team-stats-${teamId}`, () => api.getTeamStatistics(teamId, leagueId));
-    if (res?.response?.[0]) {
-      teamStatsById[teamId] = res.response[0];
+    if (res?.response && !Array.isArray(res.response)) {
+      teamStatsById[teamId] = res.response as import('@/types/api-football').TeamStatistics;
     }
   }
 
