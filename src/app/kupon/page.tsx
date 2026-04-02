@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Sparkles, X, Info, RefreshCw, Copy, Check, Bookmark, Trash2, History, Zap } from 'lucide-react';
+import { Sparkles, Info, RefreshCw, Copy, Check, Bookmark, Trash2, History, Zap } from 'lucide-react';
 import type { AppCache } from '@/types/cache';
 import type { CouponFilters, CouponSelection, GeneratedCoupon, BetType } from '@/types/coupon';
 import { DEFAULT_FILTERS, BET_TYPE_LABELS, CONFIDENCE_LABELS, RISK_LABELS } from '@/types/coupon';
@@ -29,6 +29,7 @@ export default function KuponPage() {
   const [history, setHistory] = useState<SavedCoupon[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [poissonMinConf, setPoissonMinConf] = useState(0);
+  const [poissonMinProb, setPoissonMinProb] = useState(40);
   const [poissonOnlyFull, setPoissonOnlyFull] = useState(false);
 
   useEffect(() => { setHistory(getHistory()); }, []);
@@ -120,6 +121,8 @@ export default function KuponPage() {
       if (!p || p.dataQuality === 'none') return [];
       if (poissonOnlyFull && p.dataQuality !== 'full') return [];
       if (p.confidence < poissonMinConf) return [];
+      // Olasılık filtresi: düşük ihtimalli maçları elensin
+      const minProbThreshold = poissonMinProb / 100;
 
       const bets: { fixture: typeof fixture; type: '1' | 'X' | '2'; prob: number; odd: number | null }[] = [];
 
@@ -131,16 +134,19 @@ export default function KuponPage() {
         return isNaN(n) ? null : n;
       };
 
-      if (p.valueHome) bets.push({ fixture, type: '1', prob: p.probHome, odd: getOdd('Home') });
-      if (p.valueDraw) bets.push({ fixture, type: 'X', prob: p.probDraw, odd: getOdd('Draw') });
-      if (p.valueAway) bets.push({ fixture, type: '2', prob: p.probAway, odd: getOdd('Away') });
+      if (p.valueHome && p.probHome >= minProbThreshold) bets.push({ fixture, type: '1', prob: p.probHome, odd: getOdd('Home') });
+      if (p.valueDraw && p.probDraw >= minProbThreshold) bets.push({ fixture, type: 'X', prob: p.probDraw, odd: getOdd('Draw') });
+      if (p.valueAway && p.probAway >= minProbThreshold) bets.push({ fixture, type: '2', prob: p.probAway, odd: getOdd('Away') });
 
       return bets.map((b) => ({ ...b, confidence: p.confidence, dataQuality: p.dataQuality }));
     })
     .sort((a, b) => {
+      // Sıralama: olasılık × EV — hem ihtimal yüksek hem adil değer var olanlar öne çıkar
       const evA = a.odd ? a.prob * a.odd - 1 : 0;
       const evB = b.odd ? b.prob * b.odd - 1 : 0;
-      return evB - evA;
+      const scoreA = a.prob * evA;
+      const scoreB = b.prob * evB;
+      return scoreB - scoreA;
     });
 
   const typeLabel: Record<string, string> = { '1': 'Ev Sahibi', 'X': 'Beraberlik', '2': 'Deplasman' };
@@ -310,7 +316,17 @@ export default function KuponPage() {
                 <h3 className="font-semibold text-white">Poisson Filtreleri</h3>
 
                 <div>
-                  <label className="text-xs text-slate-400 mb-1 block">Min. Güven Skoru: {poissonMinConf}</label>
+                  <label className="text-xs text-slate-400 mb-1 block">Min. Olasılık: %{poissonMinProb}</label>
+                  <input
+                    type="range" min={20} max={70} step={5} value={poissonMinProb}
+                    onChange={(e) => setPoissonMinProb(Number(e.target.value))}
+                    className="w-full accent-blue-500"
+                  />
+                  <div className="flex justify-between text-[10px] text-slate-600 mt-0.5">
+                    <span>%20</span><span>%45</span><span>%70</span>
+                  </div>
+
+                  <label className="text-xs text-slate-400 mb-1 block mt-3">Min. Güven Skoru: {poissonMinConf}</label>
                   <input
                     type="range" min={0} max={90} step={5} value={poissonMinConf}
                     onChange={(e) => setPoissonMinConf(Number(e.target.value))}
