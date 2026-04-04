@@ -22,7 +22,7 @@ function calcFormScore(prediction: FixturePrediction | null | undefined): number
 
   // league.form = "WWDLW" (W/D/L dizisi), last_5.form = "47%" (yüzde)
   const parseWDL = (form: string): number => {
-    const chars = form.split('').filter((c) => ['W', 'D', 'L'].includes(c));
+    const chars = form.split('').filter((c) => ['W', 'D', 'L'].includes(c)).slice(-10);
     if (chars.length === 0) return 50; // veri yok → nötr
     const pts = chars.reduce((a, c) => a + (c === 'W' ? 3 : c === 'D' ? 1 : 0), 0);
     return Math.round((pts / (chars.length * 3)) * 100);

@@ -402,15 +402,15 @@ function PredBar({ label, value, color }: { label: string; value: number; color:
 function FormCard({ team, teamData }: { team: Fixture['teams']['home']; teamData: import('@/types/api-football').PredictionTeamForm }) {
   // league.form = "WWDLW" (maç sonuçları), last_5.form = "47%" (performans yüzdesi)
   const form = (teamData.league?.form ?? '') as string;
-  // Sadece W/D/L karakterlerini al
-  const validForm = form.split('').filter((c) => ['W', 'D', 'L'].includes(c));
-  // Son 5 maç puanı: W=3, D=1, L=0
+  // Sadece W/D/L karakterlerini al, son 10 maç
+  const validForm = form.split('').filter((c) => ['W', 'D', 'L'].includes(c)).slice(-10);
+  // Son 10 maç puanı: W=3, D=1, L=0
   const points = validForm.reduce((acc, c) => acc + (c === 'W' ? 3 : c === 'D' ? 1 : 0), 0);
   const maxPoints = validForm.length * 3;
 
-  // Trend: son 2 maç vs önceki maçlar
-  const recent = validForm.slice(-2);
-  const older = validForm.slice(0, -2);
+  // Trend: son 3 maç vs önceki 7 maç
+  const recent = validForm.slice(-3);
+  const older = validForm.slice(0, -3);
   const recentPts = recent.reduce((a, c) => a + (c === 'W' ? 3 : c === 'D' ? 1 : 0), 0);
   const olderPts = older.length > 0 ? older.reduce((a, c) => a + (c === 'W' ? 3 : c === 'D' ? 1 : 0), 0) / older.length : 0;
   const recentAvg = recent.length > 0 ? recentPts / recent.length : 0;
