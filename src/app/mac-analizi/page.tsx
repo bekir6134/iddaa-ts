@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { useWeekFixtures, useAllOdds, useAllPredictions } from '@/hooks/useData';
+import { useWeekFixtures, useAllOdds, useAllPredictions, useAllPoisson, useAllH2H } from '@/hooks/useData';
 import { MatchCard } from '@/components/dashboard/MatchCard';
 import { LeagueFilter } from '@/components/dashboard/LeagueFilter';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -27,6 +27,8 @@ export default function MacAnaliziPage() {
   const { data: weekFixtures, isLoading } = useWeekFixtures();
   const { data: allOdds } = useAllOdds();
   const { data: allPredictions } = useAllPredictions();
+  const { data: allPoisson } = useAllPoisson();
+  const { data: allH2H } = useAllH2H();
 
   const allFixtures = useMemo((): Fixture[] => {
     if (!weekFixtures) return [];
@@ -102,6 +104,8 @@ export default function MacAnaliziPage() {
                       fixture={f}
                       odds={allOdds?.[f.fixture.id]}
                       prediction={allPredictions?.[f.fixture.id]}
+                      poisson={allPoisson?.[f.fixture.id]}
+                      h2h={allH2H?.[`${f.teams.home.id}_${f.teams.away.id}`]}
                     />
                   ))}
                 </div>

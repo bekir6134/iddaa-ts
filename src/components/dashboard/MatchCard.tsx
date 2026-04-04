@@ -4,13 +4,17 @@ import Image from 'next/image';
 import Link from 'next/link';
 import type { Fixture } from '@/types/api-football';
 import type { FixtureOdds, FixturePrediction } from '@/types/api-football';
+import type { PoissonResult } from '@/types/cache';
 import { Badge } from '@/components/ui/badge';
 import { formatTurkeyTime, formatOdd, formatMatchDay, cn } from '@/lib/utils';
+import { scoreMatch } from '@/lib/match-scorer';
 
 interface MatchCardProps {
   fixture: Fixture;
   odds?: FixtureOdds | null;
   prediction?: FixturePrediction | null;
+  poisson?: PoissonResult | null;
+  h2h?: Fixture[] | null;
 }
 
 function ConfidenceBadge({ percent }: { percent: number }) {
@@ -31,8 +35,11 @@ function OddPill({ label, value, highlight }: { label: string; value: string; hi
   );
 }
 
-export function MatchCard({ fixture, odds, prediction }: MatchCardProps) {
+export function MatchCard({ fixture, odds, prediction, poisson, h2h }: MatchCardProps) {
   const { home, away } = fixture.teams;
+  const score = (poisson || prediction)
+    ? scoreMatch(fixture.fixture.id, home.id, away.id, prediction, poisson, odds, h2h ?? null)
+    : null;
   const matchWinner = odds?.bookmakers?.[0]?.bets?.find((b) => b.name === 'Match Winner');
   const odd1 = matchWinner?.values?.find((v) => v.value === 'Home')?.odd;
   const oddX = matchWinner?.values?.find((v) => v.value === 'Draw')?.odd;
@@ -60,6 +67,19 @@ export function MatchCard({ fixture, odds, prediction }: MatchCardProps) {
             <span className="text-xs text-slate-400">{fixture.league.name}</span>
           </div>
           <div className="flex items-center gap-2">
+            {score && (
+              <span
+                className={cn(
+                  'text-[10px] font-bold px-1.5 py-0.5 rounded',
+                  score.total >= 60 ? 'bg-emerald-700 text-emerald-100' :
+                  score.total >= 35 ? 'bg-yellow-700 text-yellow-100' :
+                  'bg-slate-600 text-slate-300'
+                )}
+                title={`Analiz skoru: ${score.total}/100 — Öneri: ${score.recommendation}`}
+              >
+                {score.total}
+              </span>
+            )}
             <span className="text-xs text-slate-400">{formatMatchDay(fixture.fixture.date)}</span>
             <span className="text-xs font-mono bg-slate-700 px-2 py-0.5 rounded text-slate-200">
               {formatTurkeyTime(fixture.fixture.date)}
@@ -125,7 +145,14 @@ export function MatchCard({ fixture, odds, prediction }: MatchCardProps) {
             </div>
             <div className="flex justify-between items-center mt-2">
               <span className="text-[10px] text-slate-400">{pred?.advice}</span>
-              {maxPct !== null && <ConfidenceBadge percent={maxPct} />}
+              <div className="flex items-center gap-1.5">
+                {score && score.recommendation !== '-' && (
+                  <Badge className="bg-slate-700 text-slate-200 text-[10px] px-1.5 py-0">
+                    {score.recommendation}
+                  </Badge>
+                )}
+                {maxPct !== null && <ConfidenceBadge percent={maxPct} />}
+              </div>
             </div>
           </div>
         )}

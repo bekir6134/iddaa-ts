@@ -78,6 +78,14 @@ export function formToColor(char: string): string {
   return 'bg-gray-400';
 }
 
+export function getFormColor(points: number, max: number): string {
+  if (max === 0) return 'text-slate-400';
+  const ratio = points / max;
+  if (ratio >= 0.67) return 'text-emerald-400';
+  if (ratio >= 0.34) return 'text-yellow-400';
+  return 'text-red-400';
+}
+
 // ─── League Constants ─────────────────────────────────────────────────────────
 
 export const LEAGUE_IDS = {

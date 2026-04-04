@@ -9,7 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useWeekFixtures, useFixtureOdds, useFixturePrediction, useH2H, useTeamInjuries, useFixturePoisson } from '@/hooks/useData';
-import { formatTurkeyDateTime, formatOdd, formToColor, formatScore, cn, LEAGUE_NAMES } from '@/lib/utils';
+import { formatTurkeyDateTime, formatOdd, formToColor, getFormColor, formatScore, cn, LEAGUE_NAMES } from '@/lib/utils';
 import type { Fixture } from '@/types/api-football';
 
 export default function MatchDetailPage({ params }: { params: Promise<{ fixtureId: string }> }) {
@@ -400,11 +400,23 @@ function PredBar({ label, value, color }: { label: string; value: number; color:
 }
 
 function FormCard({ team, teamData }: { team: Fixture['teams']['home']; teamData: import('@/types/api-football').PredictionTeamForm }) {
-  const form = teamData.last_5?.form ?? '';
+  const form = (teamData.last_5?.form ?? '') as string;
   // Sadece W/D/L karakterlerini al
   const validForm = form.split('').filter((c) => ['W', 'D', 'L'].includes(c));
   // Son 5 maç puanı: W=3, D=1, L=0
   const points = validForm.reduce((acc, c) => acc + (c === 'W' ? 3 : c === 'D' ? 1 : 0), 0);
+  const maxPoints = validForm.length * 3;
+
+  // Trend: son 2 maç vs önceki maçlar
+  const recent = validForm.slice(-2);
+  const older = validForm.slice(0, -2);
+  const recentPts = recent.reduce((a, c) => a + (c === 'W' ? 3 : c === 'D' ? 1 : 0), 0);
+  const olderPts = older.length > 0 ? older.reduce((a, c) => a + (c === 'W' ? 3 : c === 'D' ? 1 : 0), 0) / older.length : 0;
+  const recentAvg = recent.length > 0 ? recentPts / recent.length : 0;
+  const trend = validForm.length >= 3
+    ? recentAvg > olderPts ? '↑ Yükseliyor' : recentAvg < olderPts ? '↓ Düşüyor' : '→ Stabil'
+    : null;
+  const trendColor = trend?.startsWith('↑') ? 'text-emerald-400' : trend?.startsWith('↓') ? 'text-red-400' : 'text-slate-400';
 
   const formLabel: Record<string, string> = { W: 'G', D: 'B', L: 'M' };
 
@@ -436,6 +448,9 @@ function FormCard({ team, teamData }: { team: Fixture['teams']['home']; teamData
           <span><span className="inline-block w-2 h-2 rounded-full bg-yellow-500 mr-1" />B = Beraberlik</span>
           <span><span className="inline-block w-2 h-2 rounded-full bg-red-500 mr-1" />M = Mağlubiyet</span>
         </div>
+        {trend && (
+          <p className={`text-[10px] mt-1 font-medium ${trendColor}`}>Trend: {trend}</p>
+        )}
       </div>
 
       <div className="grid grid-cols-3 gap-2 text-center text-xs mt-3">
@@ -451,18 +466,19 @@ function FormCard({ team, teamData }: { team: Fixture['teams']['home']; teamData
         />
         <StatBox
           label={`Son ${validForm.length} Maç Puanı`}
-          value={validForm.length > 0 ? String(points) : '-'}
-          tooltip={`G=3, B=1, M=0 puan. Maksimum ${validForm.length * 3} puan.`}
+          value={validForm.length > 0 ? `${points} / ${maxPoints}` : '-'}
+          valueColor={validForm.length > 0 ? getFormColor(points, maxPoints) : undefined}
+          tooltip={`G=3, B=1, M=0 puan. ${validForm.length} maçtan ${points} puan (max ${maxPoints}).`}
         />
       </div>
     </div>
   );
 }
 
-function StatBox({ label, value, tooltip }: { label: string; value: string; tooltip?: string }) {
+function StatBox({ label, value, tooltip, valueColor }: { label: string; value: string; tooltip?: string; valueColor?: string }) {
   const box = (
     <div className="bg-slate-700 rounded-lg p-2 cursor-default">
-      <div className="text-emerald-400 font-bold text-sm">{value}</div>
+      <div className={`${valueColor ?? 'text-emerald-400'} font-bold text-sm`}>{value}</div>
       <div className="text-slate-500 text-[10px]">{label}</div>
     </div>
   );
