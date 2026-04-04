@@ -400,7 +400,8 @@ function PredBar({ label, value, color }: { label: string; value: number; color:
 }
 
 function FormCard({ team, teamData }: { team: Fixture['teams']['home']; teamData: import('@/types/api-football').PredictionTeamForm }) {
-  const form = (teamData.last_5?.form ?? '') as string;
+  // league.form = "WWDLW" (maç sonuçları), last_5.form = "47%" (performans yüzdesi)
+  const form = (teamData.league?.form ?? '') as string;
   // Sadece W/D/L karakterlerini al
   const validForm = form.split('').filter((c) => ['W', 'D', 'L'].includes(c));
   // Son 5 maç puanı: W=3, D=1, L=0
@@ -453,7 +454,7 @@ function FormCard({ team, teamData }: { team: Fixture['teams']['home']; teamData
         )}
       </div>
 
-      <div className="grid grid-cols-3 gap-2 text-center text-xs mt-3">
+      <div className="grid grid-cols-2 gap-2 text-center text-xs mt-3">
         <StatBox
           label="Ort. Attığı Gol"
           value={teamData.last_5?.goals?.for?.average ?? '-'}
@@ -465,10 +466,15 @@ function FormCard({ team, teamData }: { team: Fixture['teams']['home']; teamData
           tooltip="Son 5 maçta maç başına yediği ortalama gol"
         />
         <StatBox
-          label={`Son ${validForm.length} Maç Puanı`}
+          label={`Son ${validForm.length > 0 ? validForm.length : '?'} Maç Puanı`}
           value={validForm.length > 0 ? `${points} / ${maxPoints}` : '-'}
           valueColor={validForm.length > 0 ? getFormColor(points, maxPoints) : undefined}
           tooltip={`G=3, B=1, M=0 puan. ${validForm.length} maçtan ${points} puan (max ${maxPoints}).`}
+        />
+        <StatBox
+          label="Form Performansı"
+          value={teamData.last_5?.form ?? '-'}
+          tooltip="API'nin son 5 maç form performans yüzdesi"
         />
       </div>
     </div>

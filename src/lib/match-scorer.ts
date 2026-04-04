@@ -20,15 +20,25 @@ function calcFormScore(prediction: FixturePrediction | null | undefined): number
   const home = prediction.teams.home;
   const away = prediction.teams.away;
 
-  const parseForm = (form: string): number => {
+  // league.form = "WWDLW" (W/D/L dizisi), last_5.form = "47%" (yüzde)
+  const parseWDL = (form: string): number => {
     const chars = form.split('').filter((c) => ['W', 'D', 'L'].includes(c));
     if (chars.length === 0) return 50; // veri yok → nötr
     const pts = chars.reduce((a, c) => a + (c === 'W' ? 3 : c === 'D' ? 1 : 0), 0);
     return Math.round((pts / (chars.length * 3)) * 100);
   };
+  const parsePct = (pct: string): number => {
+    const n = parseFloat(pct);
+    return isNaN(n) ? 50 : Math.min(100, Math.max(0, n));
+  };
 
-  const homeForm = parseForm(home.last_5?.form ?? '');
-  const awayForm = parseForm(away.last_5?.form ?? '');
+  // Önce league.form (W/D/L), yoksa last_5.form (yüzde) kullan
+  const homeForm = home.league?.form
+    ? parseWDL(home.league.form)
+    : parsePct(home.last_5?.form ?? '');
+  const awayForm = away.league?.form
+    ? parseWDL(away.league.form)
+    : parsePct(away.last_5?.form ?? '');
 
   // Ev formunun üstünlüğü skora yansır (ev avantajı yüksek ise puan artar)
   const diff = homeForm - awayForm; // -100 .. +100

@@ -88,7 +88,7 @@ export interface FixtureOdds {
 // ─── Prediction ───────────────────────────────────────────────────────────────
 
 export interface PredictionTeamLast5 {
-  form: string; // e.g. "WWDLW"
+  form: string; // performans yüzdesi e.g. "47%" (W/D/L dizisi DEĞİL — o PredictionTeamLeague.form'da)
   att: string;
   def: string;
   goals: {
